@@ -5,6 +5,8 @@ Every stroke of its tail pushes water backwards, and that wake pushes back on yo
 
 <sub>水中の生物を操作する流体力学のおもちゃ。尾を打つたびに水へ運動量を渡し、その渦が自分に返ってきます。</sub>
 
+![demo](docs/demo.gif)
+
 ![Vorticity wake of the swimmer: red is counter-clockwise, blue is clockwise](docs/wake.svg)
 
 ## What it models
@@ -41,7 +43,7 @@ make            # needs only a C compiler and make
 | `p` | pause |
 | `q` | quit |
 
-Other modes: `./current-swimmer --headless [dir]` writes the CSV and SVG charts, `--snapshot` prints one frame of the field.
+Other modes: `./current-swimmer --headless [dir]` writes the CSV and SVG charts, `--snapshot` prints one frame of the field, `--gif docs/demo.gif` writes the scripted swim as an animated GIF.
 
 No compiler installed? `docker build -t current-swimmer . && docker run --rm -it current-swimmer`.
 

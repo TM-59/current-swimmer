@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "fluid.h"
+#include "gif.h"
 #include "render.h"
 #include "svg.h"
 #include "swimmer.h"
@@ -136,6 +137,73 @@ static int run_snapshot(void)
     return used ? 0 : 1;
 }
 
+/* Palette: 0 still water, 1..6 clockwise (blue), 7..12 counter-clockwise (red), 13 body, 14 nose. */
+static int vorticity_index(float w, float ref)
+{
+    float t = tanhf(w / ref);
+    int level = (int)(fabsf(t) * 6.0f + 0.5f);
+    if (level > 6) level = 6;
+    return level == 0 ? 0 : (t < 0.0f ? level : 6 + level);
+}
+
+/* Pixels of one frame: n x n cells, `scale` pixels per cell, row 0 of the fluid at the bottom. */
+static void paint_frame(const Fluid *f, const Swimmer *s, int scale, unsigned char *px)
+{
+    int n = f->n, size = n * scale;
+    float ref = fluid_max_abs_vorticity(f);
+    if (ref < 1.0f) ref = 1.0f;
+    ref *= 0.5f;
+    for (int j = 0; j < n; j++)
+        for (int i = 0; i < n; i++) {
+            unsigned char c = (unsigned char)vorticity_index(fluid_vorticity_at(f, i + 1, j + 1), ref);
+            for (int dy = 0; dy < scale; dy++)
+                memset(px + ((n - 1 - j) * scale + dy) * size + i * scale, c, (size_t)scale);
+        }
+    float bx = s->x * (float)size, by = (1.0f - s->y) * (float)size, rad = s->radius * (float)size;
+    float nx = bx + cosf(s->heading) * (rad + (float)scale), ny = by - sinf(s->heading) * (rad + (float)scale);
+    for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++) {
+            float dx = (float)x + 0.5f - bx, dy = (float)y + 0.5f - by;
+            float ex = (float)x + 0.5f - nx, ey = (float)y + 0.5f - ny;
+            if (dx * dx + dy * dy <= rad * rad) px[y * size + x] = 13;
+            else if (ex * ex + ey * ey <= (float)(scale * scale)) px[y * size + x] = 14;
+        }
+}
+
+/* Scripted swim (the --headless route) as an animated GIF of the vorticity field. */
+static int run_gif(const char *path)
+{
+    enum { SCALE = 8, STRIDE = 9 };
+    Fluid f;
+    Swimmer s;
+    if (fluid_init(&f, GRID, VISC)) return 1;
+    swimmer_init(&s, 0.3f, 0.5f, 0.0f);
+    unsigned char pal[GIF_COLOURS][3] = {{12, 16, 30},   {30, 50, 100},  {40, 75, 150},  {55, 105, 195},
+                                         {80, 140, 230}, {120, 175, 250}, {170, 210, 255}, {100, 40, 40},
+                                         {150, 50, 45},  {200, 70, 55},  {235, 105, 60},  {250, 150, 85},
+                                         {255, 200, 130}, {245, 245, 245}, {255, 220, 40}};
+    int size = GRID * SCALE;
+    unsigned char *px = malloc((size_t)size * (size_t)size);
+    Gif *g = px ? gif_open(path, size, size, pal, 6) : NULL;
+    if (!g) { free(px); fluid_free(&f); return 1; }
+    int steps = (int)(18.0f / DT), rc = 0;
+    for (int k = 0; k <= steps && !rc; k++) {
+        if (k % STRIDE == 0 || k == steps) {
+            paint_frame(&f, &s, SCALE, px);
+            rc = gif_frame(g, px, k == steps ? 250 : 0);
+        }
+        Controls c;
+        scripted((float)k * DT, &c);
+        swimmer_step(&s, &f, &c, DT);
+        fluid_step(&f, DT);
+    }
+    rc |= gif_close(g);
+    printf("final position (%.3f, %.3f), speed %.3f\n", s.x, s.y, swimmer_speed(&s));
+    free(px);
+    fluid_free(&f);
+    return rc;
+}
+
 static int run_interactive(void)
 {
     if (!isatty(STDIN_FILENO)) {
@@ -199,7 +267,8 @@ int main(int argc, char **argv)
 {
     if (argc >= 2 && !strcmp(argv[1], "--headless")) return run_headless(argc >= 3 ? argv[2] : "docs");
     if (argc >= 2 && !strcmp(argv[1], "--snapshot")) return run_snapshot();
+    if (argc >= 2 && !strcmp(argv[1], "--gif")) return run_gif(argc >= 3 ? argv[2] : "demo.gif");
     if (argc == 1) return run_interactive();
-    fprintf(stderr, "usage: %s [--headless [outdir] | --snapshot]\n", argv[0]);
+    fprintf(stderr, "usage: %s [--headless [outdir] | --snapshot | --gif [file]]\n", argv[0]);
     return 2;
 }
