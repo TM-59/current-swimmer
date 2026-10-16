@@ -1,0 +1,19 @@
+name: ci
+# PR 上の軽量ゲートのみ(push では回さない)。Dependabot の更新もこの 1 本で検証する。
+on:
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build --progress=plain .
