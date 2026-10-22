@@ -1,3 +1,8 @@
 current-swimmer
 test_fluid
 test_gif
+test_view
+dist/
+node_modules/
+out/
+__pycache__/
