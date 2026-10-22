@@ -29,11 +29,11 @@
 実行時の `make` には一時ツールチェーンを `CC` で指定した。システムへインストール
 していない。Pythonスクリプトは3.14.4。ブラウザー用の物理コードはEmscriptenで検査した。
 
-変更前・変更後の参照CSVはバイト単位でも一致した。
+変更前・変更後の参照CSVはバイト単位でも一致した（下記はSHA-256の先頭12桁）。
 
 ```text
-SHA-256 docs/run.csv / baseline/run.csv
-a11288283b6db6f3da184c30ce881d67fe2be2e6bae6635554860e58eee756e9
+SHA-256 prefix: docs/run.csv / baseline/run.csv
+a11288283b6d / a11288283b6d
 ```
 
 ローカル下書きのテスト観点は採否を見直した。原画表示と画像欠落時の継続動作を採用。
