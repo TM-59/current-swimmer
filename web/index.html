@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Steer a small fish, then coast through its wake. Explore a C11 fluid simulation with live vorticity, flow arrows and Reynolds number.">
+  <title>Current Swimmer · A stroke leaves a trace</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="physics.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+<header>
+  <a class="brand" href="./" aria-label="Current Swimmer home"><span class="mark">≈</span><span>CURRENT SWIMMER<small>A SMALL STUDY OF MOTION</small></span></a>
+  <span id="status" role="status">LOADING WATER…</span>
+</header>
+<main>
+  <section class="water-panel" aria-label="Swimming pool">
+    <div class="pool-label"><span>01 / THE POOL</span><span id="clock">0.00 s</span></div>
+    <div class="pool">
+      <canvas id="water" width="720" height="720" aria-label="Top view of the swimmer and the measured water flow"></canvas>
+      <div id="welcome">
+        <p class="eyebrow">LEAVE SOMETHING IN YOUR WAKE</p>
+        <h1>A stroke<br>leaves a trace.</h1>
+        <p>Push the water. Let go.<br>Watch the water push back.</p>
+        <div><button id="start" disabled>Enter the water <span>↗</span></button><button id="demo" class="quiet" disabled>Watch a swim</button></div>
+        <small>Free exploration · no score, no timer to beat</small>
+      </div>
+    </div>
+    <div class="legend"><span class="positive">↺ + Counter-clockwise</span><span class="negative">↻ − Clockwise</span><span id="scale">ω / s⁻¹</span></div>
+    <div class="toolbar"><button id="pause" disabled>Pause</button><button id="reset" disabled>Reset water</button><label><input id="vorticity" type="checkbox" checked> Vorticity</label><label><input id="arrows" type="checkbox" checked> Flow arrows</label><label><input id="disc" type="checkbox"> Model disc</label></div>
+    <div class="touch" aria-label="Hold to steer and stroke"><button data-control="left" aria-label="Turn left">↶ Left <kbd>A</kbd></button><button data-control="stroke" aria-label="Beat the tail">Stroke <kbd>W / SPACE</kbd></button><button data-control="right" aria-label="Turn right">Right ↷ <kbd>D</kbd></button></div>
+  </section>
+  <aside>
+    <section class="specimen"><span class="eyebrow">MEET YOUR SWIMMER</span><img src="assets/hero-fish.png" alt="Original teal fish with ivory spine stripe and copper fins"><h2>Copperfin</h2><p>A little effort. A lasting ripple.</p></section>
+    <section class="readings" aria-label="Live measurements">
+      <div class="section-label">LIVE MEASUREMENTS <span id="stroke-state">COASTING</span></div>
+      <dl><div><dt>Speed <small>domain/s</small></dt><dd id="speed">0.000</dd></div><div><dt>Reynolds number <small>dimensionless</small></dt><dd id="re">0.0</dd></div><div><dt>Peak |ω| <small>s⁻¹</small></dt><dd id="vort">0.00</dd></div></dl>
+      <canvas id="speed-plot" width="280" height="68" aria-label="Recent measured speed history"></canvas><div class="plot-label"><span>RECENT SPEED</span><span>LAST 20 s</span></div>
+    </section>
+    <section class="notes"><h2>Feel the difference</h2><p>Hold <kbd>W</kbd> or <kbd>SPACE</kbd> to stroke. Steer with <kbd>A</kbd> / <kbd>D</kbd>. Release to coast through your own wake.</p><p><kbd>P</kbd> pauses. The buttons also work by touch.</p><details><summary>About the model</summary><p>The fish is an illustration. Physics still uses a disc of diameter 0.06 in a unit-square pool, with 48 × 48 fluid cells and a fixed 0.02 s step. Turn on Model disc to see its size.</p><p>ω is signed vorticity; arrows show water velocity. The heatmap rescales to the displayed ± range each frame. The background is decorative.</p><p id="energy">Water energy: 0 · Max divergence: 0</p></details></section>
+    <p id="art-warning" role="status" hidden>Artwork unavailable. The model marker and measurements are still active.</p>
+  </aside>
+</main>
+<footer><span>INCOMPRESSIBLE FLOW / FREE-SLIP WALLS</span><span>One pool. Every stroke changes it.</span></footer>
+</body>
+</html>

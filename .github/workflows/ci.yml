@@ -16,4 +16,4 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - run: docker build --progress=plain .
+      - run: make test
