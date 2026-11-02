@@ -99,7 +99,7 @@ try {
   assert.equal(await page.locator('#scene-options button').count(), 1); await choose(0);
   await waitTime(page, 1); await shot(page, 'journey'); checks.push('Upstream: HUD shows reach, stamina, Silt and the next mark while swimming');
   s = await scene(); assert.equal(s.journey.scene, 'culvert'); seen.push('culvert');
-  assert.deepEqual(await page.locator('#scene-options button').allTextContents(), ['Squeeze through the pipe', 'Go round by the flooded ditch (wait at the weir)']);
+  assert.deepEqual(await page.locator('#scene-options button').allTextContents(), ['Squeeze through the pipe (hard water, quick)', 'Go round by the ditch (easy water, hold at the weir)']);
   await choose(0);
   s = await scene(); assert.equal(s.journey.scene, 'eddy'); assert.match(s.journey.sceneText, /shaking from the pipe/); seen.push('eddy'); await choose(0);
   s = await scene(); assert.equal(s.journey.scene, 'warm'); seen.push('warm'); await page.locator('#scene-options button').click();
@@ -147,6 +147,39 @@ try {
   checks.push('390 px Upstream: scene text >= 14 px, buttons >= 44 px, no horizontal overflow');
   await mobile.close();
 
+  // iPhone-sized screens, touch only: every visible word >= 14 CSS px, every target >= 44 x 44, the water > half the screen,
+  // and a tap on the water (no keys, no buttons) swims Copperfin through the first reach of Upstream.
+  for (const [orient, viewport] of [['portrait', {width:375,height:812}], ['landscape', {width:812,height:375}]]) {
+    const phone = await browser.newContext({viewport,isMobile:true,hasTouch:true,deviceScaleFactor:3});
+    const p = await phone.newPage(); track(p); await p.goto(url); await p.waitForFunction(() => window.__tmGate);
+    const measure = () => p.evaluate(() => {
+      const seen = el => { const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+        return r.width > 0 && r.height > 0 && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth && cs.visibility !== 'hidden' && cs.display !== 'none'; };
+      const small = [], tiny = [];
+      const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let n; (n = walk.nextNode());) { const el = n.parentElement; if (n.textContent.trim() && el && !['SCRIPT','STYLE'].includes(el.tagName) && seen(el) && parseFloat(getComputedStyle(el).fontSize) < 14) small.push(n.textContent.trim().slice(0, 30)); }
+      for (const el of document.querySelectorAll('button, a[href], input, summary, [role=button]')) if (seen(el)) { const r = el.getBoundingClientRect(); if (Math.min(r.width, r.height) < 44) tiny.push(el.id || el.textContent.trim().slice(0, 20)); }
+      const c = document.getElementById('water').getBoundingClientRect();
+      return {small, tiny, area: Math.min(c.width, innerWidth) * Math.min(c.height, innerHeight) / (innerWidth * innerHeight), overflow: document.documentElement.scrollWidth > innerWidth,
+        canvasText: window.__tmGate.texts().map(t => t.px / window.__tmGate.logical.h * c.height)};
+    });
+    let m = await measure(); assert.deepEqual(m.small, []); assert.deepEqual(m.tiny, []); assert(m.area >= .5 && !m.overflow, JSON.stringify(m));
+    const tapHint = async () => { const h = await p.evaluate(() => window.__tmGate.hint()); const c = await p.evaluate(h => { const r = document.getElementById('water').getBoundingClientRect(), L = window.__tmGate.logical; return {x: r.left + h.x / L.w * r.width, y: r.top + h.y / L.h * r.height}; }, h); await p.touchscreen.tap(c.x, c.y); };
+    await tapHint(); await p.waitForFunction(() => window.__tmGate.scene() === 'scene:outlet');
+    await tapHint(); await p.waitForFunction(() => window.__tmGate.scene() === 'play');
+    m = await measure(); assert.deepEqual(m.small, []); assert.deepEqual(m.tiny, []); assert(!m.overflow);
+    const x0 = (await inspect(p)).state[0];
+    await tapHint(); await p.waitForFunction(() => window.swimmerView.aim);
+    await p.waitForFunction(() => window.__tmGate.goal() || window.swimmerView.journey.scene, null, {timeout: 30000});
+    s = await inspect(p); assert(s.journey.reach >= 1 && s.state[0] > x0, JSON.stringify(s.journey));
+    m = await measure(); assert(m.canvasText.every(px => px >= 14), JSON.stringify(m.canvasText));
+    await p.locator('#scene-options button').first().tap(); await p.waitForFunction(() => window.__tmGate.scene() === 'play');
+    await p.locator('#reset').tap(); assert.equal((await inspect(p)).journey.reach, 1);  // a first tap only arms the restart
+    await p.waitForFunction(() => document.getElementById('reset').textContent === 'Tap again to restart');
+    await shot(p, `phone-${orient}`); await phone.close();
+    checks.push(`${viewport.width}x${viewport.height} touch only: text >= 14 px, targets >= 44 px, water ${Math.round(m.area * 100)} % of the screen; tapping the water clears the first reach; restart asks twice`);
+  }
+
   const fallback = await browser.newPage({viewport:{width:1280,height:800}}); track(fallback);
   await fallback.route('**/assets/**', route => route.fulfill({status:404,body:''}));
   await fallback.goto(url); await fallback.waitForFunction(() => window.swimmerView);
@@ -158,7 +191,7 @@ try {
   assert.deepEqual(errors,[]); assert.deepEqual(external,[]);
   checks.push('page errors 0; external requests 0');
   const sizes = [];
-  for (const file of ['before','title','swim','model','mobile','journey','reeds','spring']) sizes.push({file:`${images}/${file}.jpg`,bytes:(await stat(`${images}/${file}.jpg`)).size});
+  for (const file of ['before','title','swim','model','mobile','journey','reeds','spring','phone-portrait','phone-landscape']) sizes.push({file:`${images}/${file}.jpg`,bytes:(await stat(`${images}/${file}.jpg`)).size});
   const summary = {checks,errors,externalRequests:external,images:sizes};
   await writeFile('out/smoke.json',JSON.stringify(summary,null,2)+'\n'); console.log(JSON.stringify(summary,null,2));
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

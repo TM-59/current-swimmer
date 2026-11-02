@@ -30,11 +30,11 @@ enum {
 /* Numeric story effects, one bit each, so the bench can remove them one by one. */
 enum {
     JE_PACE = 1u << 0,     /* swimming with Silt: strokes cost less stamina */
-    JE_ROUTE = 1u << 1,    /* the pipe narrows the water: stronger jet in reach 2 */
-    JE_EDDY = 1u << 2,     /* rest in the eddy: stamina refilled, a larger reserve for reach 3 */
+    JE_ROUTE = 1u << 1,    /* the pipe narrows the water: stronger jet in reach 2; the ditch is slack and ends at a weir */
+    JE_EDDY = 1u << 2,     /* rest in the eddy: stamina refilled, a larger reserve for reaches 3 and 4 */
     JE_WARM = 1u << 3,     /* warm drain water: stamina comes back at half speed in reach 4 */
     JE_PARTING = 1u << 4,  /* Silt stays behind: no more pace in reach 5 */
-    JE_STAY = 1u << 5,     /* staying with Silt: time spent, stamina back, faster recovery */
+    JE_STAY = 1u << 5,     /* staying with Silt: stamina back, faster recovery; the last board comes out as you leave */
     JE_SURGE = 1u << 6,    /* the second board: stronger jet from the halfway mark of reach 5 */
     JE_ALL = (1u << 7) - 1u
 };
@@ -56,9 +56,10 @@ typedef struct {
     float stamina, stamina_max;
     int winded;           /* stamina ran out: strokes do nothing until it is back to 35 % */
     float flow;           /* sluice jet strength for this reach */
-    float time;           /* journey seconds, including time spent waiting */
+    float time;           /* journey seconds in the water (every second is a swimming step; no flat waits) */
     float strain;         /* seconds spent with stamina below 20 % */
     float reach_time;
+    float held;           /* seconds held at a hold mark so far (the ditch's weir, the reeds beside Silt) */
     float best_x;
     int sweeps;
     int sweeps_reach[J_REACHES];
@@ -80,6 +81,10 @@ int journey_answer(Journey *j, int option);
 int journey_options(int scene);
 /* 1 for scenes that must be shown without a cleared banner (the heavy scenes). */
 int journey_heavy(int scene);
+/* Seconds the swimmer must hold within journey_hold_radius() of the current mark (the ditch's weir, the reeds when
+ * staying with Silt); 0 for an ordinary mark. The clock and the current keep running while it holds. */
+float journey_hold_need(const Journey *j);
+float journey_hold_radius(void);
 /* Index of the ending reached: 0 = stayed with Silt, 1 = left him; -1 before the spring. */
 int journey_ending(const Journey *j);
 

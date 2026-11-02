@@ -25,13 +25,18 @@ static const float BASE_FLOW[J_REACHES] = {0.45f, 0.60f, 0.30f, 0.55f, 0.62f};
 #define REGEN 0.25f          /* stamina per second while coasting */
 #define PACE_DRAIN 0.60f     /* JE_PACE: drain multiplier while Silt sets the pace */
 #define PIPE_FLOW 1.30f      /* JE_ROUTE: the pipe narrows the water */
-#define EDDY_RESERVE 1.25f   /* JE_EDDY: stamina reserve for the reach after the eddy */
-#define WARM_REGEN 0.32f     /* JE_WARM: warm water holds less oxygen */
-#define STAY_SECONDS 45.0f   /* JE_STAY: time spent beside Silt */
+#define EDDY_RESERVE 1.50f   /* JE_EDDY: stamina reserve for the two reaches after the eddy */
+#define WARM_REGEN 0.12f     /* JE_WARM: warm water holds less oxygen */
 #define STAY_REGEN 1.40f     /* JE_STAY: "push, then let go" */
-#define GO_SURGE 1.15f       /* JE_STAY: leaving at once beats the second board to the halfway mark */
-#define DITCH_DRAIN 0.70f    /* JE_ROUTE: the flooded ditch is still water */
-#define DITCH_WAIT 45.0f     /* JE_ROUTE: the ditch ends at a weir; wait for the water to rise over the lip */
+#define STAY_HOLD 22.0f      /* JE_STAY: swimming seconds held beside Silt in the reeds (the current keeps running) */
+#define GO_SURGE 1.22f       /* JE_STAY: leaving at once beats the second board to the halfway mark */
+#define SURGE_X 0.5f         /* the halfway mark of the last reach; staying, the board comes out as you leave the reeds */
+#define DITCH_DRAIN 0.40f    /* JE_ROUTE: the flooded ditch is still water */
+#define DITCH_FLOW 0.60f     /* JE_ROUTE: and the ditch takes only part of the jet */
+#define WEIR_HOLD 18.0f      /* JE_ROUTE: a weir in the ditch; hold there, swimming time, until the lip fills */
+#define WEIR_MARK 1          /* JE_ROUTE: the weir is halfway round the ditch, in the slack water by the field */
+#define HOLD_RADIUS 0.14f    /* a hold timer runs only while the swimmer stays this close to its mark */
+#define REEDS_X 0.16f        /* where Silt stopped */
 #define SURGE_FLOW 1.30f     /* JE_SURGE: the second sluice board */
 #define EASE_FLOW 0.85f      /* the pond keeps emptying: the jet weakens after each sweep */
 
@@ -46,6 +51,17 @@ int journey_ending(const Journey *j)
 }
 
 static int on(const Journey *j, unsigned effect) { return (j->effects & effect) != 0; }
+
+static int at_weir(const Journey *j) { return j->reach == 1 && j->route == 1 && on(j, JE_ROUTE) && j->mark == WEIR_MARK; }
+static int in_reeds(const Journey *j) { return j->reach == 4 && j->stay == 0 && on(j, JE_STAY) && j->mark == 0; }
+
+float journey_hold_need(const Journey *j)
+{
+    if (j->reach >= J_REACHES) return 0.0f;
+    return at_weir(j) ? WEIR_HOLD : in_reeds(j) ? STAY_HOLD : 0.0f;
+}
+
+float journey_hold_radius(void) { return HOLD_RADIUS; }
 
 static void open_scene(Journey *j, int scene)
 {
@@ -69,6 +85,10 @@ static void set_marks(Journey *j)
         j->marks = 3;
         memcpy(j->mark_x, ditch_x, sizeof ditch_x);
         memcpy(j->mark_y, ditch_y, sizeof ditch_y);
+    } else if (j->reach == 4 && j->stay == 0 && on(j, JE_STAY)) {
+        j->marks = 2;
+        j->mark_x[0] = REEDS_X; j->mark_y[0] = 0.5f;
+        j->mark_x[1] = GATE_X; j->mark_y[1] = 0.5f;
     } else if (j->reach == 1) {
         j->marks = 2;
         j->mark_x[0] = 0.5f; j->mark_y[0] = 0.5f;
@@ -126,9 +146,11 @@ static void start_reach(Journey *j)
     swimmer_init(&j->fish, START_X, START_Y, 0.0f);
     j->flow = BASE_FLOW[j->reach];
     if (j->reach == 1 && j->route == 0 && on(j, JE_ROUTE)) j->flow *= PIPE_FLOW;
-    if (j->reach != 2) j->stamina_max = 1.0f;
+    if (j->reach == 1 && j->route == 1 && on(j, JE_ROUTE)) j->flow *= DITCH_FLOW;
+    if (j->reach != 2 && j->reach != 3) j->stamina_max = 1.0f;  /* the eddy's reserve lasts through the warm water */
     if (j->stamina > j->stamina_max) j->stamina = j->stamina_max;
     j->reach_time = 0.0f;
+    j->held = 0.0f;
     j->best_x = START_X;
     set_marks(j);
     spin_up(j);
@@ -154,7 +176,6 @@ static void clear_reach(Journey *j)
 {
     static const int next[J_REACHES] = {JS_CULVERT, JS_EDDY, JS_WARM, JS_REEDS, JS_SPRING};
     int scene = next[j->reach];
-    if (j->reach == 1 && j->route == 1 && on(j, JE_ROUTE)) j->time += DITCH_WAIT;
     j->reach++;
     /* The heavy scenes and the ending get the screen to themselves: no cleared banner. */
     if (!journey_heavy(scene) && scene != JS_SPRING) raise_banner(j, JB_CLEAR);
@@ -185,7 +206,9 @@ void journey_step(Journey *j, float turn, int stroke)
     if (j->banner_left > 0.0f && (j->banner_left -= J_DT) <= 0.0f) j->banner = JB_NONE;
     if (j->fish.x > j->best_x) j->best_x = j->fish.x;
 
-    /* Swept back: the current took more than SWEEP_LOSS of the ground won. The pond keeps emptying. */
+    /* Swept back: the current took more than SWEEP_LOSS of the ground won. The pond keeps emptying.
+     * Holding at the weir or in the reeds is not ground lost: the ring is the measure there. */
+    if (journey_hold_need(j) > 0.0f) j->best_x = j->fish.x;
     if (j->best_x - j->fish.x > SWEEP_LOSS) {
         j->sweeps++;
         j->sweeps_reach[r]++;
@@ -198,13 +221,24 @@ void journey_step(Journey *j, float turn, int stroke)
     /* A reach that takes too long gets easier the same way. */
     if (j->reach_time >= EASE_SECONDS) { j->flow *= EASE_FLOW; j->reach_time = 0.0f; }
 
-    if (r == 4 && !j->surged && j->fish.x >= 0.5f) {
+    /* The second board: at the halfway mark, or the moment Copperfin leaves the reeds after staying with Silt. */
+    int staying = j->stay == 0 && on(j, JE_STAY);
+    if (r == 4 && !j->surged && (staying ? j->mark >= 1 : j->fish.x >= SURGE_X)) {
         j->surged = 1;
         open_scene(j, JS_SURGE);
         return;
     }
-    float dx = j->fish.x - j->mark_x[j->mark], dy = j->fish.y - j->mark_y[j->mark];
-    if (dx * dx + dy * dy <= MARK_RADIUS * MARK_RADIUS && ++j->mark >= j->marks) clear_reach(j);
+    float dx = j->fish.x - j->mark_x[j->mark], dy = j->fish.y - j->mark_y[j->mark], d2 = dx * dx + dy * dy;
+    float need = journey_hold_need(j);
+    if (need > 0.0f) {
+        /* The weir and the reeds: the clock and the current keep running; the timer fills only while Copperfin holds close. */
+        if (d2 <= HOLD_RADIUS * HOLD_RADIUS && (j->held += J_DT) >= need) {
+            j->held = 0.0f;
+            if (++j->mark >= j->marks) clear_reach(j);
+        }
+        return;
+    }
+    if (d2 <= MARK_RADIUS * MARK_RADIUS && ++j->mark >= j->marks) clear_reach(j);
 }
 
 int journey_answer(Journey *j, int option)
@@ -233,7 +267,7 @@ int journey_answer(Journey *j, int option)
     case JS_REEDS:
         j->stay = option;
         if (on(j, JE_PARTING)) j->silt = 0;
-        if (option == 0 && on(j, JE_STAY)) { j->time += STAY_SECONDS; j->stamina = j->stamina_max; }
+        if (option == 0 && on(j, JE_STAY)) j->stamina = j->stamina_max;
         start_reach(j);
         break;
     case JS_SURGE:
