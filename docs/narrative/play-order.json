@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "generator": "tests/story_bench.c (make story)",
+  "note": "Scenes open at fixed progress points: a reach starts, a reach is cleared, the halfway mark of the last reach. culvert 0 = pipe, 1 = ditch; reeds 0 = stay with Silt, 1 = leave. quiet lists the heavy scenes shown with no cleared banner raised before the next stroke. Do not edit by hand.",
+  "seeds": [
+    {"seed": "0", "choices": {"culvert": 0, "reeds": 0}, "order": ["outlet", "culvert", "eddy", "warm", "taste", "reeds", "surge", "spring"], "won": true, "ending": "end-stay", "quiet": ["reeds", "surge"]},
+    {"seed": "1", "choices": {"culvert": 1, "reeds": 0}, "order": ["outlet", "culvert", "eddy", "warm", "taste", "reeds", "surge", "spring"], "won": true, "ending": "end-stay", "quiet": ["reeds", "surge"]},
+    {"seed": "2", "choices": {"culvert": 0, "reeds": 1}, "order": ["outlet", "culvert", "eddy", "warm", "taste", "reeds", "surge", "spring"], "won": true, "ending": "end-left", "quiet": ["reeds", "surge"]},
+    {"seed": "3", "choices": {"culvert": 1, "reeds": 1}, "order": ["outlet", "culvert", "eddy", "warm", "taste", "reeds", "surge", "spring"], "won": true, "ending": "end-left", "quiet": ["reeds", "surge"]},
+    {"seed": "4", "choices": {"culvert": 0, "reeds": 0}, "order": ["outlet", "culvert", "eddy", "warm", "taste", "reeds", "surge", "spring"], "won": true, "ending": "end-stay", "quiet": ["reeds", "surge"]},
+    {"seed": "5", "choices": {"culvert": 1, "reeds": 0}, "order": ["outlet", "culvert", "eddy", "warm", "taste", "reeds", "surge", "spring"], "won": true, "ending": "end-stay", "quiet": ["reeds", "surge"]},
+    {"seed": "6", "choices": {"culvert": 0, "reeds": 1}, "order": ["outlet", "culvert", "eddy", "warm", "taste", "reeds", "surge", "spring"], "won": true, "ending": "end-left", "quiet": ["reeds", "surge"]},
+    {"seed": "7", "choices": {"culvert": 1, "reeds": 1}, "order": ["outlet", "culvert", "eddy", "warm", "taste", "reeds", "surge", "spring"], "won": true, "ending": "end-left", "quiet": ["reeds", "surge"]},
+    {"seed": "8", "choices": {"culvert": 0, "reeds": 0}, "order": ["outlet", "culvert", "eddy", "warm", "taste", "reeds", "surge", "spring"], "won": true, "ending": "end-stay", "quiet": ["reeds", "surge"]},
+    {"seed": "9", "choices": {"culvert": 1, "reeds": 0}, "order": ["outlet", "culvert", "eddy", "warm", "taste", "reeds", "surge", "spring"], "won": true, "ending": "end-stay", "quiet": ["reeds", "surge"]},
+    {"seed": "10", "choices": {"culvert": 0, "reeds": 1}, "order": ["outlet", "culvert", "eddy", "warm", "taste", "reeds", "surge", "spring"], "won": true, "ending": "end-left", "quiet": ["reeds", "surge"]},
+    {"seed": "11", "choices": {"culvert": 1, "reeds": 1}, "order": ["outlet", "culvert", "eddy", "warm", "taste", "reeds", "surge", "spring"], "won": true, "ending": "end-left", "quiet": ["reeds", "surge"]}
+  ]
+}

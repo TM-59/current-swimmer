@@ -16,4 +16,6 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - run: make test
+      # make test inside the Dockerfile's Debian 13 toolchain: the story bench rows in
+      # docs/narrative are compared byte for byte, so libm must round the same way as `make story`.
+      - run: docker build -t current-swimmer .

@@ -6,3 +6,6 @@ dist/
 node_modules/
 out/
 __pycache__/
+test_story
+story_bench
+.story-check/
