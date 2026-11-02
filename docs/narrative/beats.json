@@ -1,17 +1,17 @@
 {
   "version": 1,
-  "arc": "Man in a hole: a run upstream with an old fish (0), a false spring (+2) that turns out to be a greenhouse drain (-1), the old fish stops in the reeds (-3, the bottom at 0.71), the home pond is drained away (-2), the cold spring (+3).",
-  "note": "Scenes open in src/journey.c at fixed progress points (a reach starts, a reach is cleared, the halfway mark of the last reach); the words are in web/app.js. The physics in fluid.c and swimmer.c is unchanged; story beats change only the sluice jet strength and the stamina budget. The actual order per seed is in play-order.json, story numbers on/off and per choice path in ablation.json, per-reach crises and sweeps in tension.json, all written by make story. tests/test_story.c checks the order, every [mech] number and the [quiet] heavy scenes; make test re-runs bench rows and requires them verbatim. Emotion values are the author's own scoring; an independent review is still to do.",
+  "arc": "Man in a hole: a run upstream with an old fish as the pond starts to drain (-1), a false spring (+2) that turns out to be a greenhouse drain (-1), the old fish stops in the reeds (-3, the bottom at 0.71), the home pond is drained away (-2), the cold spring (+2).",
+  "note": "Scenes open in src/journey.c at fixed progress points (a reach starts, a reach is cleared, the halfway mark of the last reach); the words are in web/app.js. The physics in fluid.c and swimmer.c is unchanged; story beats change only the sluice jet strength and the stamina budget. The actual order per seed is in play-order.json, story numbers on/off and per choice path in ablation.json, per-reach crises and sweeps in tension.json, all written by make story. tests/test_story.c checks the order, every [mech] number and the [quiet] heavy scenes; make test re-runs bench rows and requires them verbatim. Emotion values were re-scored by an independent reviewer (claude-reviewer, 2026-11-02) from the scene text in web/app.js and the effects in src/journey.c.",
   "characters": [
     {"id": "copperfin", "want": "to keep up with Silt and reach the spring before the pond is gone", "need": "to stop beating its tail without rest: push, then let go, and set the pace for someone else", "start": "races ahead and cheers at the first warm water", "end": "waits at the mouth of the spring, pushing when the water pushes, for the next small fish (or alone, listening for a tail that does not come)"},
     {"id": "silt", "want": "one more run to the spring", "need": "to hand the way on before his fins give out", "start": "leads and calls the strokes", "end": "stays behind in the reeds and lets Copperfin go on"}
   ],
   "beats": [
     {"id": "outlet", "chapter": 1, "summary": "The outlet board is lifted and the pond starts to drain. Silt sets the pace: strokes cost less while he swims with you.",
-     "valence": 0, "intensity": 1, "emotion": "fear", "tags": ["reward", "quiet"], "setup": ["s-cold", "s-pace"],
+     "valence": -1, "intensity": 2, "emotion": "fear", "tags": ["reward", "quiet"], "setup": ["s-cold", "s-pace"],
      "mechanism": {"state": "JE_PACE", "test": "[mech] pace"}, "evidence": "Push when I push. Rest when I rest."},
     {"id": "culvert", "chapter": 2, "summary": "The stream splits: a short pipe that squeezes the jet, or the slack ditch round the field that ends at a weir you must wait at.",
-     "valence": -1, "intensity": 2, "emotion": "fear", "tags": ["choice"],
+     "valence": -1, "intensity": 1, "emotion": "fear", "tags": ["choice"],
      "choice": {"options": 2, "changes": ["eddy"], "labels": ["Squeeze through the pipe", "Go round by the flooded ditch (wait at the weir)"]},
      "mechanism": {"state": "route", "test": "[mech] route"}, "evidence": "It squeezes the water, and the water squeezes you."},
     {"id": "eddy", "chapter": 2, "summary": "A back-eddy behind a stone. They rest; the stamina reserve fills past full for the next reach.",
@@ -20,7 +20,7 @@
     {"id": "warm", "chapter": 3, "summary": "Warm still water. Copperfin thinks they have made it.",
      "valence": 2, "intensity": 3, "emotion": "joy", "tags": ["peak"], "evidence": "We made it, Silt!"},
     {"id": "taste", "chapter": 3, "summary": "Silt tastes it: the spring is never warm. It is the greenhouse drain, and warm water gives the breath back slowly.",
-     "valence": -1, "intensity": 3, "emotion": "surprise", "tags": ["cost", "twist"], "payoff": ["s-cold"],
+     "valence": -1, "intensity": 2, "emotion": "surprise", "tags": ["cost", "twist"], "payoff": ["s-cold"],
      "mechanism": {"state": "JE_WARM", "test": "[mech] warm"}, "evidence": "The spring is never warm. This is the glasshouse drain."},
     {"id": "reeds", "chapter": 4, "summary": "Silt's fins are done. He stays in the reeds. Stay with him until he breathes easier (time passes, stamina back), or leave before the second board comes out.",
      "valence": -3, "intensity": 3, "emotion": "sorrow", "tags": ["loss", "choice"], "irreversible": true,
@@ -33,7 +33,7 @@
      "presentation": {"quiet": true, "test": "[quiet] surge"},
      "mechanism": {"state": "JE_SURGE", "test": "[mech] surge"}, "evidence": "That was home. You could have waited one more day."},
     {"id": "spring", "chapter": 5, "summary": "Cold water all at once. Copperfin pushes, then lets go; the ending depends on what it did in the reeds.",
-     "valence": 3, "intensity": 3, "emotion": "relief", "tags": ["peak"], "payoff": ["s-cold", "s-letgo"],
+     "valence": 2, "intensity": 3, "emotion": "relief", "tags": ["peak"], "payoff": ["s-cold", "s-letgo"],
      "evidence": "The water turns cold all at once. Colder than your fins."}
   ],
   "endings": [
