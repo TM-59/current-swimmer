@@ -10,8 +10,11 @@ Every stroke of its tail pushes water backwards, and that wake pushes back on yo
 A second way to play. The pond is being drained: a sluice at the right wall pushes a jet of
 water at you, and Copperfin has to follow Silt, an old loach, up five reaches to a cold spring.
 Push to make headway, coast to get your breath back, and coasting in the jet loses ground.
-Two choices (the pipe or the ditch; stay with Silt or leave him) change the time on the clock,
-the stamina left, and how the journey ends.
+Two choices trade swimming time for breath, and change how the journey ends: the pipe is quick
+but squeezes the jet; the ditch is easy water but has a weir where you hold inside a ring for 18 s
+while the current runs. Staying with Silt is a 22 s hold in the reeds that gives your breath back,
+but the last board comes out as you leave; leaving at once meets a weaker board at the halfway mark.
+On a phone, tap the water to swim there, or hold and drag to steer.
 
 | Swimming a reach | Silt stops in the reeds | One of the two endings |
 |---|---|---|
@@ -50,7 +53,8 @@ make play
 ```
 
 画面内の Enter the water で開始。Watch a swim は決まった操作の見本、Swim upstream は
-物語つきの M5、Reset water は流れと位置を初期化する。Vorticity / Flow arrows / Model disc は表示だけを切り替える。
+物語つきの M5、Reset water は流れと位置を初期化する。スマートフォンでは水面をタップするとそこへ泳ぎ、
+押したまま動かすと指へ向かう(要件は [docs/requirements.md](docs/requirements.md)、構成は [docs/design.md](docs/design.md))。Vorticity / Flow arrows / Model disc は表示だけを切り替える。
 魚の絵は表現で、物理は直径0.06の円盤のまま。背景の岩・水草も装飾である。
 色は相対スケールで、凡例の±値を毎フレーム表示する。
 保存機能・外部通信・音声はない。人間の初見試遊と実スマートフォンは未検証。

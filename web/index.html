@@ -12,7 +12,7 @@
 </head>
 <body>
 <header>
-  <a class="brand" href="./" aria-label="Current Swimmer home"><span class="mark">≈</span><span>CURRENT SWIMMER<small>A SMALL STUDY OF MOTION</small></span></a>
+  <div class="brand"><span class="mark" aria-hidden="true">≈</span><span>CURRENT SWIMMER<small>A SMALL STUDY OF MOTION</small></span></div>
   <span id="status" role="status">LOADING WATER…</span>
 </header>
 <main>
@@ -26,15 +26,16 @@
         <p>Push the water. Let go.<br>Watch the water push back.</p>
         <div><button id="start" disabled>Enter the water <span>↗</span></button><button id="demo" class="quiet" disabled>Watch a swim</button></div>
         <div class="story-start"><button id="upstream" disabled>Swim upstream <span>· a story in five reaches</span></button></div>
-        <small>Free exploration · no score, no timer to beat</small>
+        <small>Tap the water to swim there · no score, no timer to beat</small>
       </div>
       <div id="banner" role="status" hidden></div>
       <div id="scene" hidden aria-live="polite"><div id="scene-text"></div><div id="scene-options"></div></div>
     </div>
-    <div id="journey-hud" hidden><span id="reach"></span><span class="stamina" aria-label="Stamina"><span id="stamina-fill"></span><span id="stamina-label"></span></span><span id="silt"></span><span id="sweeps"></span></div>
-    <div class="legend"><span class="positive">↺ + Counter-clockwise</span><span class="negative">↻ − Clockwise</span><span id="scale">ω / s⁻¹</span></div>
-    <div class="toolbar"><button id="pause" disabled>Pause</button><button id="reset" disabled>Reset water</button><label><input id="vorticity" type="checkbox" checked> Vorticity</label><label><input id="arrows" type="checkbox" checked> Flow arrows</label><label><input id="disc" type="checkbox"> Model disc</label></div>
+    <div id="journey-hud" hidden><span id="reach"></span><span class="stamina" aria-label="Stamina"><span id="stamina-fill"></span><span id="stamina-label"></span></span><span id="silt"></span><span id="sweeps"></span><span id="hold" hidden></span></div>
+    <p id="hint" hidden>Tap the water to swim there. Hold to keep swimming. The dashed ring is the next mark.</p>
     <div class="touch" aria-label="Hold to steer and stroke"><button data-control="left" aria-label="Turn left">↶ Left <kbd>A</kbd></button><button data-control="stroke" aria-label="Beat the tail">Stroke <kbd>W / SPACE</kbd></button><button data-control="right" aria-label="Turn right">Right ↷ <kbd>D</kbd></button></div>
+    <div class="legend"><span class="positive">↺ + Counter-clockwise</span><span class="negative">↻ − Clockwise</span><span id="scale">ω / s⁻¹</span></div>
+    <div class="toolbar"><button id="pause" disabled>Pause</button><button id="reset" disabled>Reset water</button><button id="story" hidden>Swim upstream</button><label><input id="vorticity" type="checkbox" checked> Vorticity</label><label><input id="arrows" type="checkbox" checked> Flow arrows</label><label><input id="disc" type="checkbox"> Model disc</label></div>
   </section>
   <aside>
     <section class="specimen"><span class="eyebrow">MEET YOUR SWIMMER</span><img src="assets/hero-fish.png" alt="Original teal fish with ivory spine stripe and copper fins"><h2>Copperfin</h2><p>A little effort. A lasting ripple.</p></section>
@@ -43,7 +44,7 @@
       <dl><div><dt>Speed <small>domain/s</small></dt><dd id="speed">0.000</dd></div><div><dt>Reynolds number <small>dimensionless</small></dt><dd id="re">0.0</dd></div><div><dt>Peak |ω| <small>s⁻¹</small></dt><dd id="vort">0.00</dd></div></dl>
       <canvas id="speed-plot" width="280" height="68" aria-label="Recent measured speed history"></canvas><div class="plot-label"><span>RECENT SPEED</span><span>LAST 20 s</span></div>
     </section>
-    <section class="notes"><h2>Feel the difference</h2><p>Hold <kbd>W</kbd> or <kbd>SPACE</kbd> to stroke. Steer with <kbd>A</kbd> / <kbd>D</kbd>. Release to coast through your own wake.</p><p><kbd>P</kbd> pauses. The buttons also work by touch.</p><details><summary>About the model</summary><p>The fish is an illustration. Physics still uses a disc of diameter 0.06 in a unit-square pool, with 48 × 48 fluid cells and a fixed 0.02 s step. Turn on Model disc to see its size.</p><p>ω is signed vorticity; arrows show water velocity. The heatmap rescales to the displayed ± range each frame. The background is decorative.</p><p id="energy">Water energy: 0 · Max divergence: 0</p></details></section>
+    <section class="notes"><h2>Feel the difference</h2><p>Hold <kbd>W</kbd> or <kbd>SPACE</kbd> to stroke. Steer with <kbd>A</kbd> / <kbd>D</kbd>. Release to coast through your own wake.</p><p><kbd>P</kbd> pauses. On a touch screen, tap or hold the water to swim towards your finger, or hold the buttons.</p><details><summary>About the model</summary><p>The fish is an illustration. Physics still uses a disc of diameter 0.06 in a unit-square pool, with 48 × 48 fluid cells and a fixed 0.02 s step. Turn on Model disc to see its size.</p><p>ω is signed vorticity; arrows show water velocity. The heatmap rescales to the displayed ± range each frame. The background is decorative.</p><p id="energy">Water energy: 0 · Max divergence: 0</p></details></section>
     <p id="art-warning" role="status" hidden>Artwork unavailable. The model marker and measurements are still active.</p>
   </aside>
 </main>

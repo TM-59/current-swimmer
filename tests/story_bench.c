@@ -131,7 +131,8 @@ static const char *GEN = "tests/story_bench.c (make story)";
 static const char *POLICY =
     "A swimmer who does not know the numbers: steers at the next mark with some wobble, beats the tail in bursts "
     "(0.45-0.9 s on, 0.1-0.4 s glide), rests when the stamina bar drops below its own threshold (2-20 %) and starts "
-    "again at 40-80 %. Thresholds and rhythm come from the run's own stirred seed. Choices follow the path field.";
+    "again at 40-80 %, glides while inside a hold ring. Thresholds come from the run's own stirred seed; wobble and rhythm "
+    "from a stream stirred per reach. Choices follow the path field.";
 
 static int write_all(const char *dir)
 {
@@ -162,8 +163,8 @@ static int write_all(const char *dir)
                "off = scenes still open but every story number is neutral; beats = only that scene's numbers removed; choices = one choice fixed per path, "
                "the other at its default. Do not edit by hand.\",\n", GEN, ABLATION_SEEDS);
     fprintf(f, "  \"metrics\": {\n"
-               "    \"seconds\": {\"better\": \"lower\", \"kind\": \"outcome\", \"felt\": \"screen\", \"label\": \"journey time on the clock, waiting included\"},\n"
-               "    \"strain\": {\"better\": \"lower\", \"kind\": \"outcome\", \"felt\": \"screen\", \"label\": \"seconds with the stamina bar in the red (below 20 %%)\"}\n"
+               "    \"seconds\": {\"better\": \"lower\", \"kind\": \"outcome\", \"felt\": \"screen\", \"label\": \"seconds swum, shown on the clock; every one is a played step (holds at the weir and in the reeds included, no flat waits)\"},\n"
+               "    \"strain\": {\"better\": \"lower\", \"kind\": \"outcome\", \"felt\": \"screen\", \"label\": \"seconds with the stamina bar in the red (below 20 %%); strokes do nothing once it is empty\"}\n"
                "  },\n  \"effects\": {\n    \"on\": [\n");
     write_rows(f, "      ", ab, ARM_ON);
     fprintf(f, "    ],\n    \"off\": [\n");
