@@ -25,9 +25,13 @@
         <h1>A stroke<br>leaves a trace.</h1>
         <p>Push the water. Let go.<br>Watch the water push back.</p>
         <div><button id="start" disabled>Enter the water <span>↗</span></button><button id="demo" class="quiet" disabled>Watch a swim</button></div>
+        <div class="story-start"><button id="upstream" disabled>Swim upstream <span>· a story in five reaches</span></button></div>
         <small>Free exploration · no score, no timer to beat</small>
       </div>
+      <div id="banner" role="status" hidden></div>
+      <div id="scene" hidden aria-live="polite"><div id="scene-text"></div><div id="scene-options"></div></div>
     </div>
+    <div id="journey-hud" hidden><span id="reach"></span><span class="stamina" aria-label="Stamina"><span id="stamina-fill"></span><span id="stamina-label"></span></span><span id="silt"></span><span id="sweeps"></span></div>
     <div class="legend"><span class="positive">↺ + Counter-clockwise</span><span class="negative">↻ − Clockwise</span><span id="scale">ω / s⁻¹</span></div>
     <div class="toolbar"><button id="pause" disabled>Pause</button><button id="reset" disabled>Reset water</button><label><input id="vorticity" type="checkbox" checked> Vorticity</label><label><input id="arrows" type="checkbox" checked> Flow arrows</label><label><input id="disc" type="checkbox"> Model disc</label></div>
     <div class="touch" aria-label="Hold to steer and stroke"><button data-control="left" aria-label="Turn left">↶ Left <kbd>A</kbd></button><button data-control="stroke" aria-label="Beat the tail">Stroke <kbd>W / SPACE</kbd></button><button data-control="right" aria-label="Turn right">Right ↷ <kbd>D</kbd></button></div>

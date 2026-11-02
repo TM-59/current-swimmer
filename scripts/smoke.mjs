@@ -76,6 +76,52 @@ try {
   checks.push('scripted demo yields to manual controls');
   assert.deepEqual(responseErrors,[]);
 
+  // Upstream: play the whole journey through the real UI with an in-page swimmer that only presses keys.
+  await page.goto(url); await page.waitForFunction(() => window.swimmerView);
+  await page.locator('#upstream').click();
+  await page.evaluate(() => {
+    let resting = false;
+    const press = (key, down) => window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', {key}));
+    window.__pilot = setInterval(() => {
+      const v = window.swimmerView, j = v.journey;
+      if (j.scene || v.paused) { for (const k of ['a', 'd', 'w']) press(k, false); return; }
+      const [x, y, h] = v.state, want = Math.atan2(j.mark[1] - y, j.mark[0] - x);
+      const err = ((want - h) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI;
+      press('a', err > .12); press('d', err < -.12);
+      const level = j.stamina / j.staminaMax;
+      if (level < .15) resting = true; else if (level > .65) resting = false;
+      press('w', !resting);
+    }, 20);
+  });
+  const seen = [], scene = async () => { await page.waitForFunction(() => window.swimmerView.journey.scene, null, {timeout: 120000}); return inspect(page); };
+  const choose = async (option) => { await page.locator(`#scene-options button[data-option="${option}"]`).click(); await page.waitForFunction(() => !window.swimmerView.journey.scene || window.swimmerView.journey.scene === 'taste'); };
+  s = await scene(); assert.equal(s.journey.scene, 'outlet'); assert.match(s.journey.sceneText, /Colder than your fins\./); seen.push('outlet');
+  assert.equal(await page.locator('#scene-options button').count(), 1); await choose(0);
+  await waitTime(page, 1); await shot(page, 'journey'); checks.push('Upstream: HUD shows reach, stamina, Silt and the next mark while swimming');
+  s = await scene(); assert.equal(s.journey.scene, 'culvert'); seen.push('culvert');
+  assert.deepEqual(await page.locator('#scene-options button').allTextContents(), ['Squeeze through the pipe', 'Go round by the flooded ditch (wait at the weir)']);
+  await choose(0);
+  s = await scene(); assert.equal(s.journey.scene, 'eddy'); assert.match(s.journey.sceneText, /shaking from the pipe/); seen.push('eddy'); await choose(0);
+  s = await scene(); assert.equal(s.journey.scene, 'warm'); seen.push('warm'); await page.locator('#scene-options button').click();
+  await page.waitForFunction(() => window.swimmerView.journey.scene === 'taste'); s = await inspect(page);
+  assert.match(s.journey.sceneText, /never warm/); seen.push('taste'); await choose(0);
+  s = await scene(); assert.equal(s.journey.scene, 'reeds'); seen.push('reeds');
+  assert(await page.locator('#scene.heavy').isVisible() && await page.locator('#banner').isHidden());
+  assert.equal(s.journey.bannerShown, false); await shot(page, 'reeds');
+  const loud = s.journey.loud; await choose(1);
+  s = await inspect(page); assert.equal(s.journey.silt, 0); assert.equal(s.journey.loud, loud);
+  s = await scene(); assert.equal(s.journey.scene, 'surge'); seen.push('surge');
+  assert(await page.locator('#scene.heavy').isVisible() && await page.locator('#banner').isHidden());
+  assert.match(s.journey.sceneText, /left the reeds early/); await choose(0);
+  s = await scene(); assert.equal(s.journey.scene, 'spring'); seen.push('spring');
+  assert.equal(s.journey.ending, 1); assert.match(s.journey.sceneText, /never looked back/);
+  assert(await page.locator('#scene.ending').isVisible() && await page.locator('#banner').isHidden()); await shot(page, 'spring');
+  assert(s.journey.heavy.length === 2 && s.journey.heavy.every(h => h.banner === 0));
+  await page.evaluate(() => clearInterval(window.__pilot));
+  checks.push(`Upstream played through in ${s.journey.time.toFixed(1)} s on the clock with ${s.journey.sweeps} sweeps: ${seen.join(' > ')}; heavy scenes reeds/surge with no banner`);
+  await page.locator('#scene-options button').click(); s = await inspect(page);
+  assert.equal(s.journey.scene, 'outlet'); assert(s.journey.time === 0); checks.push('Upstream restarts from the ending');
+
   const mobile = await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1});
   const touch = await mobile.newPage(); track(touch); await touch.goto(url); await touch.locator('#start').tap();
   const stroke = await touch.locator('[data-control=stroke]').boundingBox();
@@ -92,6 +138,13 @@ try {
   assert(s.state[3] > .05 && s.state[2] > .5 && s.held.length === 0);
   assert(await touch.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await shot(touch,'mobile'); checks.push('390 px: simultaneous real touch strokes and steering; no horizontal overflow');
+  await touch.goto(url); await touch.locator('#upstream').tap();
+  await touch.waitForFunction(() => window.swimmerView.journey.scene === 'outlet');
+  const sizes390 = await touch.evaluate(() => [...document.querySelectorAll('#scene p, #scene-options button')].map(e => [parseFloat(getComputedStyle(e).fontSize), e.getBoundingClientRect().height, e.tagName]));
+  assert(sizes390.every(([font]) => font >= 14) && sizes390.filter(([,, tag]) => tag === 'BUTTON').every(([, h]) => h >= 44));
+  assert(await touch.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await touch.locator('#scene-options button').tap(); await touch.waitForFunction(() => !window.swimmerView.journey.scene);
+  checks.push('390 px Upstream: scene text >= 14 px, buttons >= 44 px, no horizontal overflow');
   await mobile.close();
 
   const fallback = await browser.newPage({viewport:{width:1280,height:800}}); track(fallback);
@@ -105,7 +158,7 @@ try {
   assert.deepEqual(errors,[]); assert.deepEqual(external,[]);
   checks.push('page errors 0; external requests 0');
   const sizes = [];
-  for (const file of ['before','title','swim','model','mobile']) sizes.push({file:`${images}/${file}.jpg`,bytes:(await stat(`${images}/${file}.jpg`)).size});
+  for (const file of ['before','title','swim','model','mobile','journey','reeds','spring']) sizes.push({file:`${images}/${file}.jpg`,bytes:(await stat(`${images}/${file}.jpg`)).size});
   const summary = {checks,errors,externalRequests:external,images:sizes};
   await writeFile('out/smoke.json',JSON.stringify(summary,null,2)+'\n'); console.log(JSON.stringify(summary,null,2));
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

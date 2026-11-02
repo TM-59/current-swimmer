@@ -5,6 +5,25 @@ Every stroke of its tail pushes water backwards, and that wake pushes back on yo
 
 <sub>水中の生物を操作する流体力学のおもちゃ。尾を打つたびに水へ運動量を渡し、その渦が自分に返ってきます。</sub>
 
+## M5: Upstream, a story in five reaches
+
+A second way to play. The pond is being drained: a sluice at the right wall pushes a jet of
+water at you, and Copperfin has to follow Silt, an old loach, up five reaches to a cold spring.
+Push to make headway, coast to get your breath back, and coasting in the jet loses ground.
+Two choices (the pipe or the ditch; stay with Silt or leave him) change the time on the clock,
+the stamina left, and how the journey ends.
+
+| Swimming a reach | Silt stops in the reeds | One of the two endings |
+|---|---|---|
+| ![Reach 1: the stamina bar, Silt and the next mark under a real swim](docs/images/journey.jpg) | ![The reeds scene, shown on its own dark screen with no banner](docs/images/reeds.jpg) | ![The ending after leaving Silt](docs/images/spring.jpg) |
+
+The fluid and the disc model are unchanged. The story only changes game numbers: the
+strength of the sluice jet and a stamina budget for strokes (`src/journey.c`, one switch per
+effect). `make story` plays about 320 journeys with a human-like swimmer and writes the scene
+order, an on/off comparison for every story number, and the per-reach crises to
+[`docs/narrative/`](docs/narrative/). `make test` re-runs some of those rows and requires them
+to match. Results and limits are in the [validation notes](docs/validation.md).
+
 ## M4: 原画で泳ぐブラウザー画面
 
 C11の物理計算を共有するブラウザー画面を追加した。独自生成した魚と水辺の原画2枚を
@@ -30,8 +49,8 @@ make play
 # http://localhost:4204
 ```
 
-画面内の Enter the water で開始。Watch a swim は決まった操作の見本、Reset water は
-流れと位置を初期化する。Vorticity / Flow arrows / Model disc は表示だけを切り替える。
+画面内の Enter the water で開始。Watch a swim は決まった操作の見本、Swim upstream は
+物語つきの M5、Reset water は流れと位置を初期化する。Vorticity / Flow arrows / Model disc は表示だけを切り替える。
 魚の絵は表現で、物理は直径0.06の円盤のまま。背景の岩・水草も装飾である。
 色は相対スケールで、凡例の±値を毎フレーム表示する。
 保存機能・外部通信・音声はない。人間の初見試遊と実スマートフォンは未検証。
