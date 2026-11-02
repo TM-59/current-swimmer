@@ -5,7 +5,8 @@ const STORY = {
     ['', 'The board at the outlet lifts with a groan. The pond begins to leave.'],
     ['Silt', "The spring's up past the culvert. Cold water. Colder than your fins."],
     ['Silt', "Push when I push. Rest when I rest. Don't race me."],
-    ['Copperfin', 'I can keep up. Watch.']],
+    ['Copperfin', 'I can keep up. Watch.'],
+    ['', 'How to swim: tap the water and Copperfin swims there; hold to keep swimming. Reach the dashed ring to clear each of the five reaches.']],
     options: ['Follow Silt']},
   culvert: {lines: [
     ['', 'Below the road the stream splits in two.'],
@@ -285,6 +286,7 @@ const REACHES = ['Outlet pool', 'The culvert', 'Eddy stone to the drain', 'Warm 
     $('sweeps').textContent = `Swept back ${j[15]}×`;
     const hold = $('hold'), showHold = need > 0 && j[11] < 0;
     hold.hidden = !showHold;
+    $('hint').textContent = showHold ? 'Stay inside the orange ring until it fills. Tap inside the ring to drift there.' : 'Next: swim to the dashed ring. Tap the water to swim there; hold to keep swimming.';
     if (showHold) hold.textContent = `${j[10] === 1 ? 'Weir: hold in the ring till the lip fills' : 'Hold in the ring beside Silt'} · ${Math.ceil(need - held)} s`;
     const banner = $('banner');
     banner.hidden = !j[12] || j[27] === 1;
