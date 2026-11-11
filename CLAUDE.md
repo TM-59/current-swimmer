@@ -8,6 +8,11 @@
   Dockerfile's Debian 13 toolchain) on pull requests only.
 - Without a host compiler, run checks as
   `docker run --rm --user $(id -u):$(id -g) -v $PWD:/src -w /src <debian13+build-essential image> make test`.
+- The theory handbook is `docs/theory/`. `make theory-figs` regenerates its figures and
+  `figures/values.md` from `tests/theory_figs.c`; `make theory-check` fails on a statement
+  without a figure, a broken link, a vanished function/test/value, or a public function
+  missing from the tables. Add the page section, figure and table row in the same PR as a
+  new law or rule. The README's "20 statements" must match the table.
 - No persistence or external network services. Do not add saving as part of art work.
 - Artwork must not imply that the disc collision/drag model has become a fish-body
   simulation. Label the physical diameter and use domain units for measurements.

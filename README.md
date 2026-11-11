@@ -5,6 +5,10 @@ Every stroke of its tail pushes water backwards, and that wake pushes back on yo
 
 <sub>水中の生物を操作する流体力学のおもちゃ。尾を打つたびに水へ運動量を渡し、その渦が自分に返ってきます。</sub>
 
+**Theory handbook**: [docs/theory/](docs/theory/README.md) — 20 statements (Navier–Stokes and the Stable Fluids step piece by piece, the walls, numerical diffusion, the pressure projection, the disc's added mass and drag, Newton's third law, the Upstream rules), each with its equation, assumptions, derivation, code, tests and a figure. `make theory-figs` regenerates the figures and the measured values; `make theory-check` checks the coverage table.
+
+<sub>理論の手引き: 式・前提・導出・実装箇所・検査を、全項目に図つきで説明します。</sub>
+
 ## M5: Upstream, a story in five reaches
 
 A second way to play. The pond is being drained: a sluice at the right wall pushes a jet of

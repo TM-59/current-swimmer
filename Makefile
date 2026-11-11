@@ -4,7 +4,7 @@ LDLIBS  += -lm
 SRC     := src/fluid.c src/swimmer.c src/svg.c src/render.c src/gif.c
 STORY   := src/fluid.c src/swimmer.c src/journey.c
 
-.PHONY: all test bench story story-check web smoke play plots clean
+.PHONY: all test bench story story-check web smoke play plots clean theory-figs theory-check
 all: current-swimmer
 
 current-swimmer: $(SRC) src/main.c
@@ -67,6 +67,18 @@ plots: current-swimmer
 	./current-swimmer --gif docs/demo.gif
 	head -c6 docs/demo.gif | grep -q GIF89a
 
+# Regenerates the plotted figures and the measured-values table of docs/theory (one command).
+theory_figs: $(STORY) src/view.c src/svg.c tests/theory_figs.c tests/story_run.h tests/story_policy.h src/journey.h src/view.h src/svg.h
+	$(CC) $(CFLAGS) -o $@ $(STORY) src/view.c src/svg.c tests/theory_figs.c $(LDLIBS)
+
+theory-figs: theory_figs
+	mkdir -p docs/theory/figures
+	./theory_figs docs/theory/figures
+
+# Fails when a statement of docs/theory has no figure, a link is broken, or a referenced function or test is gone.
+theory-check:
+	python3 scripts/theory-check.py
+
 clean:
-	rm -f current-swimmer test_fluid test_gif test_view test_story story_bench
+	rm -f current-swimmer test_fluid test_gif test_view test_story story_bench theory_figs
 	rm -rf dist

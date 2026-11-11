@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" width="720" height="400" font-family="sans-serif" font-size="12">
+<rect width="720" height="400" fill="#ffffff"/>
+<text x="70" y="26" font-size="16" font-weight="bold" fill="#222">Vorticity of the cell along the middle row</text>
+<line x1="70.0" y1="44" x2="70.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="344.0" x2="700" y2="344.0" stroke="#e3e3e3"/>
+<text x="70.0" y="362" text-anchor="middle" fill="#444">0.0104</text>
+<text x="62" y="348.0" text-anchor="end" fill="#444">-0.0309</text>
+<line x1="196.0" y1="44" x2="196.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="284.0" x2="700" y2="284.0" stroke="#e3e3e3"/>
+<text x="196.0" y="362" text-anchor="middle" fill="#444">0.206</text>
+<text x="62" y="288.0" text-anchor="end" fill="#444">0.389</text>
+<line x1="322.0" y1="44" x2="322.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="224.0" x2="700" y2="224.0" stroke="#e3e3e3"/>
+<text x="322.0" y="362" text-anchor="middle" fill="#444">0.402</text>
+<text x="62" y="228.0" text-anchor="end" fill="#444">0.808</text>
+<line x1="448.0" y1="44" x2="448.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="164.0" x2="700" y2="164.0" stroke="#e3e3e3"/>
+<text x="448.0" y="362" text-anchor="middle" fill="#444">0.598</text>
+<text x="62" y="168.0" text-anchor="end" fill="#444">1.23</text>
+<line x1="574.0" y1="44" x2="574.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="104.0" x2="700" y2="104.0" stroke="#e3e3e3"/>
+<text x="574.0" y="362" text-anchor="middle" fill="#444">0.794</text>
+<text x="62" y="108.0" text-anchor="end" fill="#444">1.65</text>
+<line x1="700.0" y1="44" x2="700.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="44.0" x2="700" y2="44.0" stroke="#e3e3e3"/>
+<text x="700.0" y="362" text-anchor="middle" fill="#444">0.99</text>
+<text x="62" y="48.0" text-anchor="end" fill="#444">2.07</text>
+<rect x="70" y="44" width="630" height="300" fill="none" stroke="#888"/>
+<text x="385" y="388" text-anchor="middle" fill="#222">x [domain]</text>
+<text transform="translate(16 194) rotate(-90)" text-anchor="middle" fill="#222">vorticity [1/s]</text>
+<polyline fill="none" stroke="#1f77b4" stroke-width="2" points="70.0,330.4 83.4,312.0 96.8,293.7 110.2,275.6 123.6,257.8 137.0,240.3 150.4,223.2 163.8,206.7 177.2,190.7 190.6,175.4 204.0,160.8 217.4,146.9 230.9,133.8 244.3,121.7 257.7,110.4 271.1,100.2 284.5,91.0 297.9,82.8 311.3,75.8 324.7,69.8 338.1,65.1 351.5,61.5 364.9,59.0 378.3,57.8 391.7,57.8 405.1,59.0 418.5,61.5 431.9,65.1 445.3,69.8 458.7,75.8 472.1,82.8 485.5,91.0 498.9,100.2 512.3,110.4 525.7,121.7 539.1,133.8 552.6,146.9 566.0,160.8 579.4,175.4 592.8,190.7 606.2,206.7 619.6,223.2 633.0,240.3 646.4,257.8 659.8,275.6 673.2,293.7 686.6,312.0 700.0,330.4 "/>
+<rect x="78" y="52" width="12" height="12" fill="#1f77b4"/><text x="96" y="63" fill="#222">fluid_vorticity_at</text>
+<polyline fill="none" stroke="#d62728" stroke-width="2" points="70.0,330.4 83.4,311.9 96.8,293.6 110.2,275.5 123.6,257.7 137.0,240.2 150.4,223.2 163.8,206.6 177.2,190.6 190.6,175.3 204.0,160.6 217.4,146.7 230.9,133.7 244.3,121.5 257.7,110.3 271.1,100.0 284.5,90.8 297.9,82.6 311.3,75.6 324.7,69.6 338.1,64.9 351.5,61.3 364.9,58.8 378.3,57.6 391.7,57.6 405.1,58.8 418.5,61.3 431.9,64.9 445.3,69.6 458.7,75.6 472.1,82.6 485.5,90.8 498.9,100.0 512.3,110.3 525.7,121.5 539.1,133.7 552.6,146.7 566.0,160.6 579.4,175.3 592.8,190.6 606.2,206.6 619.6,223.2 633.0,240.2 646.4,257.7 659.8,275.5 673.2,293.6 686.6,311.9 700.0,330.4 "/>
+<rect x="228" y="52" width="12" height="12" fill="#d62728"/><text x="246" y="63" fill="#222">2 A pi^2 sin sin</text>
+</svg>
