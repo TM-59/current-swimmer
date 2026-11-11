@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" width="720" height="400" font-family="sans-serif" font-size="12">
+<rect width="720" height="400" fill="#ffffff"/>
+<text x="70" y="26" font-size="16" font-weight="bold" fill="#222">One force blob: velocity added along the row through its centre</text>
+<line x1="70.0" y1="44" x2="70.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="344.0" x2="700" y2="344.0" stroke="#e3e3e3"/>
+<text x="70.0" y="362" text-anchor="middle" fill="#444">0.0104</text>
+<text x="62" y="348.0" text-anchor="end" fill="#444">-0.000558</text>
+<line x1="196.0" y1="44" x2="196.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="284.0" x2="700" y2="284.0" stroke="#e3e3e3"/>
+<text x="196.0" y="362" text-anchor="middle" fill="#444">0.206</text>
+<text x="62" y="288.0" text-anchor="end" fill="#444">0.0019</text>
+<line x1="322.0" y1="44" x2="322.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="224.0" x2="700" y2="224.0" stroke="#e3e3e3"/>
+<text x="322.0" y="362" text-anchor="middle" fill="#444">0.402</text>
+<text x="62" y="228.0" text-anchor="end" fill="#444">0.00435</text>
+<line x1="448.0" y1="44" x2="448.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="164.0" x2="700" y2="164.0" stroke="#e3e3e3"/>
+<text x="448.0" y="362" text-anchor="middle" fill="#444">0.598</text>
+<text x="62" y="168.0" text-anchor="end" fill="#444">0.0068</text>
+<line x1="574.0" y1="44" x2="574.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="104.0" x2="700" y2="104.0" stroke="#e3e3e3"/>
+<text x="574.0" y="362" text-anchor="middle" fill="#444">0.794</text>
+<text x="62" y="108.0" text-anchor="end" fill="#444">0.00926</text>
+<line x1="700.0" y1="44" x2="700.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="44.0" x2="700" y2="44.0" stroke="#e3e3e3"/>
+<text x="700.0" y="362" text-anchor="middle" fill="#444">0.99</text>
+<text x="62" y="48.0" text-anchor="end" fill="#444">0.0117</text>
+<rect x="70" y="44" width="630" height="300" fill="none" stroke="#888"/>
+<text x="385" y="388" text-anchor="middle" fill="#222">x [domain]</text>
+<text transform="translate(16 194) rotate(-90)" text-anchor="middle" fill="#222">u [domain/s]</text>
+<polyline fill="none" stroke="#1f77b4" stroke-width="2" points="70.0,330.4 83.4,330.4 96.8,330.4 110.2,330.4 123.6,330.4 137.0,330.4 150.4,330.4 163.8,330.4 177.2,330.4 190.6,330.4 204.0,330.4 217.4,330.4 230.9,330.4 244.3,330.4 257.7,330.4 271.1,330.3 284.5,330.2 297.9,329.4 311.3,325.7 324.7,312.3 338.1,276.8 351.5,209.5 364.9,122.4 378.3,57.6 391.7,57.6 405.1,122.4 418.5,209.5 431.9,276.8 445.3,312.3 458.7,325.7 472.1,329.4 485.5,330.2 498.9,330.3 512.3,330.4 525.7,330.4 539.1,330.4 552.6,330.4 566.0,330.4 579.4,330.4 592.8,330.4 606.2,330.4 619.6,330.4 633.0,330.4 646.4,330.4 659.8,330.4 673.2,330.4 686.6,330.4 700.0,330.4 "/>
+<rect x="78" y="52" width="12" height="12" fill="#1f77b4"/><text x="96" y="63" fill="#222">u added</text>
+<polyline fill="none" stroke="#d62728" stroke-width="2" points="70.0,330.4 83.4,330.4 96.8,330.4 110.2,330.4 123.6,330.4 137.0,330.4 150.4,330.4 163.8,330.4 177.2,330.4 190.6,330.4 204.0,330.4 217.4,330.4 230.9,330.4 244.3,330.4 257.7,330.4 271.1,330.3 284.5,330.2 297.9,329.4 311.3,325.7 324.7,312.3 338.1,276.8 351.5,209.5 364.9,122.4 378.3,57.6 391.7,57.6 405.1,122.4 418.5,209.5 431.9,276.8 445.3,312.3 458.7,325.7 472.1,329.4 485.5,330.2 498.9,330.3 512.3,330.4 525.7,330.4 539.1,330.4 552.6,330.4 566.0,330.4 579.4,330.4 592.8,330.4 606.2,330.4 619.6,330.4 633.0,330.4 646.4,330.4 659.8,330.4 673.2,330.4 686.6,330.4 700.0,330.4 "/>
+<rect x="228" y="52" width="12" height="12" fill="#d62728"/><text x="246" y="63" fill="#222">Gaussian</text>
+</svg>
