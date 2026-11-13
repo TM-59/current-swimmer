@@ -12,7 +12,10 @@
  * but on a staggered (MAC) grid, with second-order MacCormack advection, an RK2 back-trace, and a pressure
  * solve iterated to a residual tolerance. The cylinder is a volume-penalised obstacle: on every velocity
  * face its solid fraction chi in [0, 1] is removed each step (u <- (1 - chi) u, the limit eta -> 0 of the
- * Brinkman term -chi u / eta), and the momentum removed per unit time is the force on the cylinder. */
+ * Brinkman term -chi u / eta), and the projection knows about the solid: it solves
+ * div((1 - chi) grad phi) = div u and corrects u -= (1 - chi) grad phi, so the pressure never pushes water
+ * back through a solid face. The force on the cylinder is the momentum removed by the penalty plus the
+ * pressure impulse the solid faces withheld, per unit time. */
 
 enum { WAKE_LX = 16, WAKE_LY = 8, WAKE_CX = 4 };
 
@@ -30,11 +33,26 @@ typedef struct {
     double fx, fy;      /* force on the cylinder per unit span from the last step [rho U^2 D] */
     int sweeps;         /* pressure sweeps used by the last projection */
     int first_order;    /* 1: plain semi-Lagrangian advection as in fluid.c, for comparison (default 0) */
+    int split_penalty;  /* 1: the M2 scheme, a plain projection after the penalty (leaks through the solid and
+                           reads the drag high); kept for the comparison of docs/theory/05-wake.md (default 0) */
+    int length;         /* channel length [D] */
+    float dt;           /* step of the last wake_step [D / U] */
 } Wake;
+
+/* Everything that can be varied in the studies. wake_init uses 16 x 8 diameters, the centre 4 D from the
+ * inflow, and the wall at the radius. */
+typedef struct {
+    int cells;          /* cells per diameter, >= 2 */
+    float reynolds;
+    int length, height; /* channel size [D] */
+    int upstream;       /* inflow to cylinder centre [D] */
+    float wall_shift;   /* moves the middle of the one-cell penalised wall outwards by this many cells */
+} WakeSetup;
 
 int wake_init(Wake *w, int cells_per_diameter, float reynolds);
 /* The same with a channel `height` diameters high (blockage 1 / height); wake_init uses WAKE_LY. */
 int wake_init_channel(Wake *w, int cells_per_diameter, float reynolds, int height);
+int wake_init_setup(Wake *w, const WakeSetup *setup);
 void wake_free(Wake *w);
 /* Largest stable step for this grid: half a cell per step at the inflow speed. */
 float wake_dt(const Wake *w);
@@ -43,6 +61,11 @@ void wake_step(Wake *w, float dt);
 /* C_D = 2 F_x / (rho U^2 D) and C_L = 2 F_y / (rho U^2 D) of the last step. */
 float wake_drag_coefficient(const Wake *w);
 float wake_lift_coefficient(const Wake *w);
+/* Drag coefficient from the momentum balance of the square box of half-width `half` diameters around the
+ * cylinder, taken on the field after the last step: momentum flux in minus out, pressure (phi / dt) on the
+ * left and right faces, viscous stress on all four. Averaged over whole lift periods it should equal the
+ * mean of wake_drag_coefficient; the difference measures what the advection scheme does not conserve. */
+float wake_control_volume_drag(const Wake *w, float half);
 /* Vorticity at the cell (i, j) centre, 0 <= i < nx, 0 <= j < ny [U / D]. */
 float wake_vorticity_at(const Wake *w, int i, int j);
 /* Largest |div u| over the fluid cells after the last projection [U / D]. */
