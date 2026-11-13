@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" width="720" height="400" font-family="sans-serif" font-size="12">
+<rect width="720" height="400" fill="#ffffff"/>
+<text x="70" y="26" font-size="16" font-weight="bold" fill="#222">Steady below Re 47, shedding above (8 cells per D, t = 100 D/U)</text>
+<line x1="70.0" y1="44" x2="70.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="344.0" x2="700" y2="344.0" stroke="#e3e3e3"/>
+<text x="70.0" y="362" text-anchor="middle" fill="#444">20</text>
+<text x="62" y="348.0" text-anchor="end" fill="#444">-0.117</text>
+<line x1="196.0" y1="44" x2="196.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="284.0" x2="700" y2="284.0" stroke="#e3e3e3"/>
+<text x="196.0" y="362" text-anchor="middle" fill="#444">56</text>
+<text x="62" y="288.0" text-anchor="end" fill="#444">0.398</text>
+<line x1="322.0" y1="44" x2="322.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="224.0" x2="700" y2="224.0" stroke="#e3e3e3"/>
+<text x="322.0" y="362" text-anchor="middle" fill="#444">92</text>
+<text x="62" y="228.0" text-anchor="end" fill="#444">0.914</text>
+<line x1="448.0" y1="44" x2="448.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="164.0" x2="700" y2="164.0" stroke="#e3e3e3"/>
+<text x="448.0" y="362" text-anchor="middle" fill="#444">128</text>
+<text x="62" y="168.0" text-anchor="end" fill="#444">1.43</text>
+<line x1="574.0" y1="44" x2="574.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="104.0" x2="700" y2="104.0" stroke="#e3e3e3"/>
+<text x="574.0" y="362" text-anchor="middle" fill="#444">164</text>
+<text x="62" y="108.0" text-anchor="end" fill="#444">1.95</text>
+<line x1="700.0" y1="44" x2="700.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="44.0" x2="700" y2="44.0" stroke="#e3e3e3"/>
+<text x="700.0" y="362" text-anchor="middle" fill="#444">200</text>
+<text x="62" y="48.0" text-anchor="end" fill="#444">2.46</text>
+<rect x="70" y="44" width="630" height="300" fill="none" stroke="#888"/>
+<text x="385" y="388" text-anchor="middle" fill="#222">Re = U D / nu</text>
+<text transform="translate(16 194) rotate(-90)" text-anchor="middle" fill="#222">C_L amplitude, L/D</text>
+<polyline fill="none" stroke="#2471a3" stroke-width="2" points="70.0,330.4 105.0,330.4 140.0,330.1 175.0,327.2 210.0,318.8 280.0,309.5 350.0,303.5 525.0,294.0 700.0,288.4 "/>
+<rect x="78" y="52" width="12" height="12" fill="#2471a3"/><text x="96" y="63" fill="#222">C_L amplitude</text>
+<polyline fill="none" stroke="#7d3c98" stroke-width="2" points="70.0,254.0 105.0,184.9 140.0,115.8 175.0,57.6 210.0,101.3 280.0,148.5 350.0,123.1 525.0,148.5 700.0,221.3 "/>
+<rect x="228" y="52" width="12" height="12" fill="#7d3c98"/><text x="246" y="63" fill="#222">eddy length L/D at t = 100 (a snapshot when shedding)</text>
+</svg>

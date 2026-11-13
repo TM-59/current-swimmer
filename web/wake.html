@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Water past a post: watch a Karman vortex street form behind a cylinder and measure its Strouhal number and drag coefficient, computed by the same C11 code as the native program.">
+  <title>Current Swimmer · Behind a post</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="physics.js"></script>
+  <script defer src="wake.js"></script>
+</head>
+<body class="wake-page">
+<header>
+  <div class="brand"><span class="mark" aria-hidden="true">≈</span><span>CURRENT SWIMMER<small>BEHIND A POST · THE KARMAN STREET</small></span></div>
+  <a class="nav" href="index.html">← Back to the pool</a>
+</header>
+<main class="wk-main">
+  <section class="wk-panel" aria-label="Flow past a cylinder">
+    <div class="pool-label"><span>02 / BEHIND A POST</span><span id="wk-clock">t = 0.0 D/U</span></div>
+    <div class="wk-field"><canvas id="wk-water" width="960" height="480" aria-label="Vorticity of the water flowing past a cylinder, left to right"></canvas></div>
+    <p class="wk-caption">Water enters at the left at speed U and leaves at the right. The black disc is the post, diameter D = 1, at x = 4 D in a channel 16 D long and 8 D high. Colour is vorticity ω: <span class="positive">orange ↺ counter-clockwise</span>, <span class="negative">blue ↻ clockwise</span>, scale tanh(ω / 1.5 U/D).</p>
+    <div class="wk-controls">
+      <label for="wk-re">Reynolds number <output id="wk-re-out">150</output></label>
+      <input id="wk-re" type="range" min="20" max="200" step="10" value="150" aria-describedby="wk-re-help">
+      <p id="wk-re-help">Re = U D / ν. Moving the slider starts the water again from rest.</p>
+      <div class="wk-buttons"><button id="wk-pause">Pause</button><button id="wk-restart">Start again</button><button id="wk-preset-30">Re 30</button><button id="wk-preset-100">Re 100</button><button id="wk-preset-200">Re 200</button></div>
+    </div>
+    <div class="section-label wk-chart-label">FORCES ON THE POST <span>last 80 D/U</span></div>
+    <canvas id="wk-forces" width="720" height="220" aria-label="Drag and lift coefficients against time"></canvas>
+    <div class="legend"><span class="wk-cd">— C<sub>D</sub> drag (along the flow)</span><span class="wk-cl">— C<sub>L</sub> lift (across the flow)</span></div>
+  </section>
+  <aside class="wk-aside">
+    <section class="readings" aria-label="Measured against the literature">
+      <div class="section-label">MEASURED <span id="wk-regime">STARTING</span></div>
+      <dl>
+        <div><dt>Strouhal number <small>St = f D / U</small></dt><dd id="wk-st">—</dd></div>
+        <div><dt>Mean drag <small>C<sub>D</sub> = 2 F<sub>x</sub> / (ρ U² D)</small></dt><dd id="wk-cd">—</dd></div>
+        <div><dt>Lift swing <small>C<sub>L</sub> amplitude</small></dt><dd id="wk-cl">—</dd></div>
+        <div><dt>Closed wake <small>eddy length L / D</small></dt><dd id="wk-lr">—</dd></div>
+      </dl>
+      <div class="wk-band" aria-label="Strouhal number against the literature band">
+        <div class="wk-band-bar"><span class="wk-band-ok" style="left:37.5%;width:37.5%"></span><span id="wk-mark-fit" class="wk-mark-fit"></span><span id="wk-mark-st" class="wk-mark-st" hidden></span></div>
+        <div class="wk-band-scale"><span>0.10</span><span>0.16</span><span>0.22</span><span>0.26</span></div>
+        <p>Green: the band 0.16–0.22 for Re 100–200. Grey line: Roshko's 1954 fit 0.212 (1 − 21.2 / Re) <span id="wk-fit">0.182</span>. Orange: this run.</p>
+      </div>
+      <p id="wk-compare" class="wk-compare">Measuring starts after 20 D/U, over the newest half of the record.</p>
+    </section>
+    <section class="notes"><h2>How it is computed</h2><p>The same C code as <kbd>./current-swimmer --karman</kbd>, compiled to WebAssembly: a staggered grid, MacCormack advection, a pressure solve to 1 × 10⁻⁴ U/D and a volume-penalised post. The force is the momentum the post takes out of the water each step.</p><details><summary>Limits</summary><p>The browser uses 6 cells per diameter (the checks of <kbd>make test</kbd>); the handbook measures 6 to 16. The channel walls block 1/8 of the width, which raises the frequency by about 3 %. The drag reads 24–28 % above the value for a post in open water (about C<sub>D</sub> 1.33 at Re 100) on every grid tried; the walls and the time step explain about 4 % each and the rest is not yet isolated. The penalised wall is one cell thick. Above Re about 190 a real wake turns three-dimensional; this one cannot.</p></details><p><a class="nav" href="https://github.com/TM-59/current-swimmer/blob/main/docs/theory/05-wake.md">Theory: page 5 of the handbook</a></p></section>
+  </aside>
+</main>
+<footer><span>FLOW PAST A CYLINDER / INFLOW · OUTFLOW · FREE-SLIP SIDES</span><span>The post never moves. The water decides when to swing.</span></footer>
+</body>
+</html>

@@ -2,17 +2,23 @@
  * (docs/theory/figures/values.md). Run with `make theory-figs`. Each figure is produced by the
  * same fluid solver (src/fluid.c), disc model (src/swimmer.c), browser adapter (src/view.c) and
  * story layer (src/journey.c) the program uses; nothing here changes them. */
+#define _POSIX_C_SOURCE 200809L
 #include "../src/fluid.h"
 #include "../src/journey.h"
 #include "../src/svg.h"
 #include "../src/swimmer.h"
 #include "../src/view.h"
+#include "../src/render.h"
+#include "../src/wake.h"
 #include "story_run.h"
 
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
 
 #define PI 3.14159265358979323846
 #define MAXN 4096
@@ -615,6 +621,231 @@ static void val_story(void)
     journey_free(&j);
 }
 
+/* ------------------------------------------------------------------ M2: the cylinder wake (page 5)
+ * Every run starts from the same nudged uniform flow and measures over the second half of the run
+ * (wake_stats). The runs are independent, so they go to child processes (at most WAKE_JOBS at a time);
+ * each child writes its result into a pipe. Order and values do not depend on the scheduling. */
+#define WAKE_JOBS 6
+#define TRACE 1024
+#define TRACE_EVERY 4
+
+typedef struct {
+    int n, height, first_order;
+    float re, t_end, dt_scale;
+    const char *svg, *title;
+} WakeJob;
+
+typedef struct {
+    WakeStats s;
+    float lr, maxdiv, sweeps, cpu, dt, mass;
+    int steps, traced;
+    float t[TRACE], cl[TRACE], cd[TRACE];
+} WakeOut;
+
+static void wake_job(const WakeJob *job, WakeOut *out)
+{
+    Wake w;
+    memset(out, 0, sizeof *out);
+    if (wake_init_channel(&w, job->n, job->re, job->height)) exit(1);
+    w.first_order = job->first_order;
+    clock_t start = clock();
+    float dt = wake_dt(&w) * job->dt_scale;
+    int steps = (int)(job->t_end / dt + 0.5f);
+    float *cl = malloc((size_t)steps * sizeof(float)), *cd = malloc((size_t)steps * sizeof(float));
+    if (!cl || !cd) exit(1);
+    double sweeps = 0.0;
+    for (int k = 0; k < steps; k++) {
+        wake_step(&w, dt);
+        cl[k] = wake_lift_coefficient(&w);
+        cd[k] = wake_drag_coefficient(&w);
+        sweeps += w.sweeps;
+        if (k % TRACE_EVERY == 0 && out->traced < TRACE) {
+            out->t[out->traced] = (float)w.t;
+            out->cl[out->traced] = cl[k];
+            out->cd[out->traced] = cd[k];
+            out->traced++;
+        }
+    }
+    out->s = wake_stats(cl, cd, steps, steps / 2, dt);
+    out->lr = wake_recirculation_length(&w);
+    out->maxdiv = wake_max_divergence(&w);
+    out->sweeps = (float)(sweeps / steps);
+    out->steps = steps;
+    out->dt = dt;
+    double in = 0.0, outflow = 0.0;
+    for (int j = 0; j < w.ny; j++) {
+        float u, v;
+        wake_sample(&w, 0.0f, ((float)j + 0.5f) * w.h, &u, &v);
+        in += u;
+        wake_sample(&w, (float)WAKE_LX, ((float)j + 0.5f) * w.h, &u, &v);
+        outflow += u;
+    }
+    out->mass = (float)(outflow / in - 1.0);
+    out->cpu = (float)((double)(clock() - start) / CLOCKS_PER_SEC);
+    if (job->svg && render_wake_svg(&w, path(job->svg), job->title)) exit(1);
+    free(cl); free(cd);
+    wake_free(&w);
+}
+
+static void wake_run_all(const WakeJob *jobs, WakeOut *outs, int count)
+{
+    int next = 0, running = 0, fds[64];
+    pid_t pids[64];
+    int done = 0;
+    while (done < count) {
+        while (running < WAKE_JOBS && next < count) {
+            int fd[2];
+            if (pipe(fd)) exit(1);
+            pid_t pid = fork();
+            if (pid < 0) exit(1);
+            if (pid == 0) {
+                close(fd[0]);
+                static WakeOut out;
+                wake_job(&jobs[next], &out);
+                const char *p = (const char *)&out;
+                size_t left = sizeof out;
+                while (left > 0) {
+                    ssize_t wrote = write(fd[1], p, left);
+                    if (wrote <= 0) _exit(1);
+                    p += wrote; left -= (size_t)wrote;
+                }
+                _exit(0);
+            }
+            close(fd[1]);
+            fds[next] = fd[0];
+            pids[next] = pid;
+            next++;
+            running++;
+        }
+        /* Collect the oldest running job (reading drains its pipe so the child can finish). */
+        int k = done;
+        char *p = (char *)&outs[k];
+        size_t left = sizeof outs[k];
+        while (left > 0) {
+            ssize_t got = read(fds[k], p, left);
+            if (got <= 0) { fprintf(stderr, "wake job %d failed\n", k); exit(1); }
+            p += got; left -= (size_t)got;
+        }
+        close(fds[k]);
+        int status;
+        waitpid(pids[k], &status, 0);
+        if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) { fprintf(stderr, "wake job %d failed\n", k); exit(1); }
+        fprintf(stderr, "wake: Re %.0f n %d H %d%s dt x%.2f: St %.4f C_D %.4f C_L amp %.4f (%.0f s)\n", jobs[k].re, jobs[k].n,
+                jobs[k].height, jobs[k].first_order ? " first-order" : "", jobs[k].dt_scale, outs[k].s.strouhal,
+                outs[k].s.cd_mean, outs[k].s.cl_amp, outs[k].cpu);
+        done++;
+        running--;
+    }
+}
+
+/* Roshko (1954), 50 < Re < 150: St = 0.212 (1 - 21.2 / Re). Used past 150 only as a dotted guide. */
+static float roshko(float re) { return 0.212f * (1.0f - 21.2f / re); }
+
+static void fig_wake(void)
+{
+    enum { NRE = 9, J_FIRST = NRE, J_DT, J_N6, J_N12, J_N16, J_H16, J_H24, NJOBS };
+    static const float res[NRE] = {20, 30, 40, 50, 60, 80, 100, 150, 200};
+    static WakeJob jobs[NJOBS];
+    static WakeOut outs[NJOBS];
+    for (int k = 0; k < NRE; k++) jobs[k] = (WakeJob){8, WAKE_LY, 0, res[k], 100.0f, 1.0f, NULL, NULL};
+    jobs[1].svg = "wake-steady.svg";
+    jobs[1].title = "Re 30: a steady pair of attached eddies, t = 100 D/U (8 cells per D)";
+    jobs[7].svg = "wake-street.svg";
+    jobs[7].title = "Re 150: a Karman vortex street, t = 100 D/U (8 cells per D)";
+    jobs[J_FIRST] = (WakeJob){8, WAKE_LY, 1, 100.0f, 100.0f, 1.0f, NULL, NULL};
+    jobs[J_DT] = (WakeJob){8, WAKE_LY, 0, 100.0f, 100.0f, 0.5f, NULL, NULL};
+    jobs[J_N6] = (WakeJob){6, WAKE_LY, 0, 100.0f, 100.0f, 1.0f, NULL, NULL};
+    jobs[J_N12] = (WakeJob){12, WAKE_LY, 0, 100.0f, 100.0f, 1.0f, NULL, NULL};
+    jobs[J_N16] = (WakeJob){16, WAKE_LY, 0, 100.0f, 100.0f, 1.0f, NULL, NULL};
+    jobs[J_H16] = (WakeJob){8, 16, 0, 100.0f, 100.0f, 1.0f, NULL, NULL};
+    jobs[J_H24] = (WakeJob){8, 24, 0, 100.0f, 100.0f, 1.0f, NULL, NULL};
+    /* Longest first so the pool finishes early. */
+    static const int order[NJOBS] = {J_N16, J_N12, J_H24, J_H16, J_DT, 0, 1, 2, 3, 4, 5, 6, 7, 8, J_FIRST, J_N6};
+    static WakeJob queue[NJOBS];
+    static WakeOut got[NJOBS];
+    for (int k = 0; k < NJOBS; k++) queue[k] = jobs[order[k]];
+    wake_run_all(queue, got, NJOBS);
+    for (int k = 0; k < NJOBS; k++) outs[order[k]] = got[k];
+    const WakeOut *r100 = &outs[6], *r150 = &outs[7], *r200 = &outs[8];
+
+    /* S22: MacCormack against the plain semi-Lagrangian step of fluid.c, lift at Re 100. */
+    int count = r100->traced < outs[J_FIRST].traced ? r100->traced : outs[J_FIRST].traced;
+    for (int k = 0; k < count; k++) { xs[k] = r100->t[k]; ya[k] = r100->cl[k]; yb[k] = outs[J_FIRST].cl[k]; }
+    Series adv[] = {{"MacCormack (used)", ya, "#2471a3"}, {"first-order semi-Lagrangian", yb, "#c0392b"}};
+    plot("wake-advection.svg", "Lift at Re 100: the first-order step damps the street", "t [D/U]", "C_L", count, adv, 2);
+    value("wake-div", "largest |div u| in any cell after the last step of the Re 100 run [U/D] (theory 0; solver tolerance 1e-4)", r100->maxdiv, 0.0);
+    value("wake-mass", "outflow / inflow - 1 at the end of the Re 100 run (theory 0)", r100->mass, 0.0);
+    value("wake-sweeps", "mean pressure sweeps per step, Re 100, 8 cells per D (no theory; warm start)", r100->sweeps, 0.0);
+    value("wake-first-order-cl", "C_L amplitude at Re 100 with first-order advection over the MacCormack amplitude (no theory: smaller means more numerical damping)",
+          outs[J_FIRST].s.cl_amp / r100->s.cl_amp, 1.0);
+    value("wake-first-order-st", "Strouhal number at Re 100 with first-order advection (0 = no shedding found)", outs[J_FIRST].s.strouhal, roshko(100.0f));
+
+    /* S23: forces on the cylinder against time at Re 100. */
+    for (int k = 0; k < r100->traced; k++) { xs[k] = r100->t[k]; ya[k] = r100->cd[k]; yb[k] = r100->cl[k]; }
+    Series forces[] = {{"C_D drag", ya, "#c0392b"}, {"C_L lift", yb, "#2471a3"}};
+    plot("wake-forces.svg", "Forces on the cylinder at Re 100 (8 cells per D)", "t [D/U]", "coefficient", r100->traced, forces, 2);
+    value("wake-cd-100", "mean C_D over whole lift periods, Re 100, 8 cells per D, blockage 1/8 (theory: about 1.33 for an unbounded cylinder)", r100->s.cd_mean, 1.33);
+    value("wake-cd-amp-100", "C_D amplitude over C_L amplitude at Re 100 (drag swings at twice the lift frequency, much smaller)", r100->s.cd_amp / r100->s.cl_amp, 0.0);
+
+    /* S24: the two regimes. */
+    for (int k = 0; k < NRE; k++) { xs[k] = res[k]; ya[k] = outs[k].s.cl_amp; yb[k] = outs[k].lr; }
+    Series regimes[] = {{"C_L amplitude", ya, "#2471a3"}, {"eddy length L/D at t = 100 (a snapshot when shedding)", yb, "#7d3c98"}};
+    plot("wake-regimes.svg", "Steady below Re 47, shedding above (8 cells per D, t = 100 D/U)", "Re = U D / nu", "C_L amplitude, L/D", NRE, regimes, 2);
+    value("wake-clamp-30", "C_L amplitude at Re 30 (theory 0: steady)", outs[1].s.cl_amp, 0.0);
+    value("wake-clamp-40", "C_L amplitude at Re 40 (theory 0: steady)", outs[2].s.cl_amp, 0.0);
+    value("wake-clamp-60", "C_L amplitude at Re 60 (shedding; no single theory value)", outs[4].s.cl_amp, 0.0);
+    value("wake-lr-20", "closed wake L/D at Re 20 (theory: 0.94, Dennis & Chang 1970, unbounded)", outs[0].lr, 0.94);
+    value("wake-lr-40", "closed wake L/D at Re 40 (theory: 2.35, Dennis & Chang 1970, unbounded)", outs[2].lr, 2.35);
+    value("wake-cd-20", "mean C_D at Re 20 (theory: 2.05, Dennis & Chang 1970, unbounded)", outs[0].s.cd_mean, 2.05);
+    value("wake-cd-40", "mean C_D at Re 40 (theory: 1.52, Dennis & Chang 1970, unbounded)", outs[2].s.cd_mean, 1.52);
+
+    /* S25: Strouhal and drag against Re, over the shedding runs (Re >= 60). */
+    int m = 0;
+    for (int k = 4; k < NRE; k++, m++) {
+        xs[m] = res[k];
+        ya[m] = outs[k].s.strouhal;
+        yb[m] = roshko(res[k]);
+        yc[m] = 0.16f;
+    }
+    static float hi[NRE];
+    for (int k = 0; k < m; k++) hi[k] = 0.22f;
+    Series st[] = {{"measured St", ya, "#2471a3"}, {"Roshko 1954 fit", yb, "#888888"}, {"band 0.16", yc, "#27ae60"}, {"band 0.22", hi, "#27ae60"}};
+    plot("wake-strouhal.svg", "Strouhal number of the shed street against Re (8 cells per D)", "Re", "St = f D / U", m, st, 4);
+    for (int k = 0; k < m; k++) ya[k] = outs[k + 4].s.cd_mean;
+    Series cd[] = {{"measured mean C_D, blockage 1/8", ya, "#c0392b"}};
+    plot("wake-drag.svg", "Mean drag coefficient against Re (8 cells per D)", "Re", "C_D", m, cd, 1);
+    value("wake-st-100", "Strouhal number at Re 100, 8 cells per D (theory: Roshko 1954 fit 0.212(1 - 21.2/Re))", r100->s.strouhal, roshko(100.0f));
+    value("wake-st-150", "Strouhal number at Re 150 (theory: the same fit)", r150->s.strouhal, roshko(150.0f));
+    value("wake-st-200", "Strouhal number at Re 200 (theory: the fit taken past its range of 150)", r200->s.strouhal, roshko(200.0f));
+    value("wake-cd-150", "mean C_D at Re 150 (theory: about 1.33 for an unbounded cylinder)", r150->s.cd_mean, 1.33);
+    value("wake-cd-200", "mean C_D at Re 200 (theory: about 1.33 for an unbounded cylinder)", r200->s.cd_mean, 1.33);
+
+    /* S26: grid, time step and blockage at Re 100. */
+    const int grid[] = {J_N6, 6, J_N12, J_N16};
+    const float cells[] = {6, 8, 12, 16};
+    for (int k = 0; k < 4; k++) { xs[k] = cells[k]; ya[k] = outs[grid[k]].s.strouhal * 10.0f; yb[k] = outs[grid[k]].s.cd_mean; }
+    Series conv[] = {{"10 x St", ya, "#2471a3"}, {"mean C_D", yb, "#c0392b"}};
+    plot("wake-convergence.svg", "Re 100 on finer grids (blockage 1/8, step 0.4 cell per U)", "cells per diameter", "10 x St, C_D", 4, conv, 2);
+    value("wake-st-n6", "St at Re 100, 6 cells per D (the grid of make test)", outs[J_N6].s.strouhal, roshko(100.0f));
+    value("wake-st-n12", "St at Re 100, 12 cells per D", outs[J_N12].s.strouhal, roshko(100.0f));
+    value("wake-st-n16", "St at Re 100, 16 cells per D", outs[J_N16].s.strouhal, roshko(100.0f));
+    value("wake-cd-n6", "C_D at Re 100, 6 cells per D", outs[J_N6].s.cd_mean, 1.33);
+    value("wake-cd-n12", "C_D at Re 100, 12 cells per D", outs[J_N12].s.cd_mean, 1.33);
+    value("wake-cd-n16", "C_D at Re 100, 16 cells per D", outs[J_N16].s.cd_mean, 1.33);
+    value("wake-clamp-n16", "C_L amplitude at Re 100, 16 cells per D (theory: about 0.33 for an unbounded cylinder)", outs[J_N16].s.cl_amp, 0.33);
+    value("wake-st-dt2", "St at Re 100, 8 cells per D, half the time step, over St at the full step (theory 1)", outs[J_DT].s.strouhal / r100->s.strouhal, 1.0);
+    value("wake-cd-dt2", "C_D at Re 100, half the time step, over C_D at the full step (theory 1)", outs[J_DT].s.cd_mean / r100->s.cd_mean, 1.0);
+    const float blockage[] = {1.0f / 24.0f, 1.0f / 16.0f, 1.0f / 8.0f};
+    const WakeOut *wide[] = {&outs[J_H24], &outs[J_H16], r100};
+    for (int k = 0; k < 3; k++) { xs[k] = blockage[k]; ya[k] = wide[k]->s.strouhal * 10.0f; yb[k] = wide[k]->s.cd_mean; }
+    Series blk[] = {{"10 x St", ya, "#2471a3"}, {"mean C_D", yb, "#c0392b"}};
+    plot("wake-blockage.svg", "Re 100 in wider channels (8 cells per D)", "blockage D / H", "10 x St, C_D", 3, blk, 2);
+    value("wake-st-h16", "St at Re 100 in a channel 16 D high (blockage 1/16)", outs[J_H16].s.strouhal, roshko(100.0f));
+    value("wake-st-h24", "St at Re 100 in a channel 24 D high (blockage 1/24)", outs[J_H24].s.strouhal, roshko(100.0f));
+    value("wake-cd-h16", "C_D at Re 100, blockage 1/16", outs[J_H16].s.cd_mean, 1.33);
+    value("wake-cd-h24", "C_D at Re 100, blockage 1/24", outs[J_H24].s.cd_mean, 1.33);
+}
+
 int main(int argc, char **argv)
 {
     snprintf(dir, sizeof dir, "%s", argc > 1 ? argv[1] : "docs/theory/figures");
@@ -637,6 +868,7 @@ int main(int argc, char **argv)
     fig_stamina();
     fig_rules();
     val_story();
+    fig_wake();
     fclose(values);
     return 0;
 }

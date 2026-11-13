@@ -14,6 +14,7 @@
 #include "render.h"
 #include "svg.h"
 #include "swimmer.h"
+#include "wake.h"
 
 #define GRID 48
 #define VISC 0.0004f
@@ -263,12 +264,49 @@ static int run_interactive(void)
     return 0;
 }
 
+/* M2: the cylinder wake at Re 150 on 8 cells per diameter for 100 D/U. Writes karman.svg (vorticity at
+ * the end) and karman-forces.svg (C_D and C_L against time) and prints the measured St and C_D. */
+static int run_karman(const char *dir)
+{
+    Wake w;
+    if (wake_init(&w, 8, 150.0f)) return 1;
+    float dt = wake_dt(&w);
+    int steps = (int)(100.0f / dt + 0.5f), every = 4, count = 0;
+    float *cl = calloc((size_t)steps, sizeof(float)), *cd = calloc((size_t)steps, sizeof(float));
+    float *t = calloc((size_t)steps / (size_t)every + 1, sizeof(float));
+    float *pl = calloc((size_t)steps / (size_t)every + 1, sizeof(float)), *pd = calloc((size_t)steps / (size_t)every + 1, sizeof(float));
+    if (!cl || !cd || !t || !pl || !pd) return 1;
+    for (int k = 0; k < steps; k++) {
+        wake_step(&w, dt);
+        cl[k] = wake_lift_coefficient(&w);
+        cd[k] = wake_drag_coefficient(&w);
+        if (k % every == 0 && w.t >= 2.0) {
+            t[count] = (float)w.t; pl[count] = cl[k]; pd[count] = cd[k]; count++;
+        }
+    }
+    WakeStats s = wake_stats(cl, cd, steps, steps / 2, dt);
+    char path[512];
+    snprintf(path, sizeof path, "%s/karman.svg", dir);
+    char title[160];
+    snprintf(title, sizeof title, "Karman vortex street behind a cylinder, Re 150, t = %.0f D/U (St %.3f, C_D %.2f)", w.t, s.strouhal, s.cd_mean);
+    if (render_wake_svg(&w, path, title)) { fprintf(stderr, "cannot write %s\n", path); return 1; }
+    snprintf(path, sizeof path, "%s/karman-forces.svg", dir);
+    Series series[] = {{"C_D drag", pd, "#c0392b"}, {"C_L lift", pl, "#2471a3"}};
+    if (svg_plot(path, "Forces on the cylinder, Re 150 (8 cells per D)", "t [D/U]", "coefficient", t, count, series, 2)) return 1;
+    printf("Re 150, 8 cells/D, %d steps of %.4f D/U: St = %.4f, mean C_D = %.4f, C_L amplitude = %.4f over %d periods\n",
+           steps, dt, s.strouhal, s.cd_mean, s.cl_amp, s.periods);
+    free(cl); free(cd); free(t); free(pl); free(pd);
+    wake_free(&w);
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc >= 2 && !strcmp(argv[1], "--headless")) return run_headless(argc >= 3 ? argv[2] : "docs");
     if (argc >= 2 && !strcmp(argv[1], "--snapshot")) return run_snapshot();
     if (argc >= 2 && !strcmp(argv[1], "--gif")) return run_gif(argc >= 3 ? argv[2] : "demo.gif");
+    if (argc >= 2 && !strcmp(argv[1], "--karman")) return run_karman(argc >= 3 ? argv[2] : "docs");
     if (argc == 1) return run_interactive();
-    fprintf(stderr, "usage: %s [--headless [outdir] | --snapshot | --gif [file]]\n", argv[0]);
+    fprintf(stderr, "usage: %s [--headless [outdir] | --snapshot | --gif [file] | --karman [outdir]]\n", argv[0]);
     return 2;
 }
