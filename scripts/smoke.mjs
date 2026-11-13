@@ -180,6 +180,60 @@ try {
     checks.push(`${viewport.width}x${viewport.height} touch only: text >= 14 px, targets >= 44 px, water ${Math.round(m.area * 100)} % of the screen; tapping the water clears the first reach; restart asks twice`);
   }
 
+  // M2 "Behind a post": the C wake in the browser. The hook advances the same C steps the page loop runs.
+  const wakeUrl = url + 'wake.html';
+  const pageText = p => p.evaluate(() => {
+    const seen = el => { const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+      return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' && !el.closest('[hidden]'); };
+    const small = [], tiny = [];
+    const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n; (n = walk.nextNode());) { const el = n.parentElement; if (n.textContent.trim() && el && !['SCRIPT','STYLE'].includes(el.tagName) && seen(el) && parseFloat(getComputedStyle(el).fontSize) < 14) small.push(n.textContent.trim().slice(0, 30)); }
+    for (const el of document.querySelectorAll('button, a[href], input, summary, [role=button]')) if (seen(el)) { const r = el.getBoundingClientRect(); if (Math.min(r.width, r.height) < 44) tiny.push(el.id || el.textContent.trim().slice(0, 20)); }
+    return {small, tiny, overflow: document.documentElement.scrollWidth > innerWidth};
+  });
+  const runWake = (p, t) => p.evaluate(t => { while (window.wakeView.state().t < t) window.wakeView.advance(30); return window.wakeView.state(); }, t);
+  {
+    const p = await browser.newPage({viewport:{width:1440,height:900}}); track(p);
+    const responses = [];
+    p.on('response', r => { if (r.status() >= 400) responses.push(`${r.status()} ${r.url()}`); });
+    await p.goto(url); await p.locator('a[href="wake.html"]').click();
+    await p.waitForFunction(() => window.wakeView); assert.deepEqual(responses, []);
+    const t0 = (await p.evaluate(() => window.wakeView.state().t)); await p.waitForTimeout(700);
+    assert((await p.evaluate(() => window.wakeView.state().t)) > t0, 'the page loop advances the C wake by itself');
+    let w = await runWake(p, 60);
+    assert(w.periods >= 2 && w.st >= 0.16 && w.st <= 0.22 && w.cdMean > 1.3 && w.cdMean < 1.9, JSON.stringify(w));
+    await p.waitForTimeout(200);
+    assert.match(await p.locator('#wk-compare').textContent(), /inside the band 0\.16–0\.22/);
+    assert(await p.locator('#wk-mark-st').isVisible());
+    let m = await pageText(p); assert.deepEqual(m.small, []); assert.deepEqual(m.tiny, []); assert(!m.overflow);
+    await shot(p, 'wake-150');
+    checks.push(`wake.html Re 150 (6 cells/D, 60 D/U): St ${w.st.toFixed(3)} in 0.16–0.22, mean C_D ${w.cdMean.toFixed(2)}, ${w.periods} lift periods`);
+    await p.locator('#wk-preset-30').click(); w = await runWake(p, 50); await p.waitForTimeout(200);
+    assert(w.re === 30 && w.periods === 0 && w.clAmp < 0.01 && w.lr > 0.5, JSON.stringify(w));
+    assert.match(await p.locator('#wk-regime').textContent(), /STEADY/);
+    await shot(p, 'wake-30');
+    checks.push(`wake.html Re 30: no shedding (C_L amplitude ${w.clAmp.toFixed(4)}), closed wake ${w.lr.toFixed(2)} D`);
+    await p.locator('#wk-re').fill('100'); w = await p.evaluate(() => window.wakeView.state());
+    assert(w.re === 100 && w.t < 1); checks.push('wake.html: the Re slider restarts the C wake at the chosen Re');
+    await p.locator('#wk-pause').click(); const frozen = (await p.evaluate(() => window.wakeView.state().t)); await p.waitForTimeout(400);
+    assert.equal(await p.evaluate(() => window.wakeView.state().t), frozen); checks.push('wake.html: pause stops the C steps');
+    await p.close();
+    for (const viewport of [{width:1024,height:768}, {width:1440,height:900}]) {
+      const q = await browser.newPage({viewport}); track(q); await q.goto(wakeUrl); await q.waitForFunction(() => window.wakeView);
+      m = await pageText(q); assert.deepEqual(m.small, []); assert.deepEqual(m.tiny, []); assert(!m.overflow, `${viewport.width}: horizontal overflow`);
+      await q.close();
+    }
+    for (const [name, viewport] of [['portrait', {width:390,height:844}], ['landscape', {width:844,height:390}]]) {
+      const ctx = await browser.newContext({viewport,isMobile:true,hasTouch:true,deviceScaleFactor:2});
+      const q = await ctx.newPage(); track(q); await q.goto(wakeUrl); await q.waitForFunction(() => window.wakeView);
+      await q.locator('#wk-preset-200').tap(); w = await runWake(q, 40); await q.waitForTimeout(200);
+      m = await pageText(q); assert.deepEqual(m.small, []); assert.deepEqual(m.tiny, []); assert(!m.overflow, `${name}: horizontal overflow`);
+      await shot(q, `wake-${name}`); await ctx.close();
+      checks.push(`wake.html ${viewport.width}x${viewport.height} touch: text >= 14 px, targets >= 44 px, no horizontal overflow (Re 200 St ${w.st.toFixed(3)})`);
+    }
+    checks.push('wake.html 1024 and 1440 px wide: text >= 14 px, targets >= 44 px, no horizontal scroll');
+  }
+
   const fallback = await browser.newPage({viewport:{width:1280,height:800}}); track(fallback);
   await fallback.route('**/assets/**', route => route.fulfill({status:404,body:''}));
   await fallback.goto(url); await fallback.waitForFunction(() => window.swimmerView);

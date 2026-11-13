@@ -1,6 +1,6 @@
 # current-swimmer
 
-- C11 + libm is the physics source of truth: `src/fluid.c` and `src/swimmer.c`.
+- C11 + libm is the physics source of truth: `src/fluid.c` and `src/swimmer.c` (the pool), `src/wake.c` (M2 cylinder wake).
 - Keep native terminal, headless CSV/SVG, and GIF modes working. The optional browser
   view compiles the same C physics with Emscripten; do not reimplement it in JavaScript.
 - `make test`, `make bench`, `make web`, `make smoke` are the local checks.
@@ -12,10 +12,22 @@
   `figures/values.md` from `tests/theory_figs.c`; `make theory-check` fails on a statement
   without a figure, a broken link, a vanished function/test/value, or a public function
   missing from the tables. Add the page section, figure and table row in the same PR as a
-  new law or rule. The README's "20 statements" must match the table.
+  new law or rule. The README's "26 statements" must match the table.
 - No persistence or external network services. Do not add saving as part of art work.
 - Artwork must not imply that the disc collision/drag model has become a fish-body
   simulation. Label the physical diameter and use domain units for measurements.
+
+## Cylinder wake (M2)
+
+- `src/wake.c` is a separate channel solver (staggered grid, MacCormack advection, pressure SOR to
+  1e-4, volume-penalised cylinder). It does not touch `fluid.c`, the pool, the swimmer or Upstream.
+- `make test` runs `tests/test_wake.c` on 6 cells per diameter for 60 D/U (about 15 s): St in
+  0.16..0.22 at Re 100/150/200, mean C_D in 1.3..1.9, no shedding at Re 30. Finer grids, the time
+  step and blockage studies belong to `make theory-figs` (page 5 of the handbook), not to CI.
+- The measured drag is 24..28 % above the open-water value on every grid tried; do not tighten the
+  C_D band without first finding that cause (see docs/theory/05-wake.md, S26).
+- `make karman` writes `docs/karman.svg` and `docs/karman-forces.svg`; the browser page is
+  `web/wake.html` (`src/wake_web.c`, 6 cells per D).
 
 ## Story layer: Upstream (M5)
 

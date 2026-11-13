@@ -10,12 +10,12 @@ if ! command -v emcc >/dev/null 2>&1; then
   source "$sdk/emsdk_env.sh" >/dev/null 2>&1
 fi
 mkdir -p dist/assets
-emcc src/fluid.c src/swimmer.c src/view.c src/journey.c src/journey_web.c -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror -lm \
+emcc src/fluid.c src/swimmer.c src/view.c src/journey.c src/journey_web.c src/wake.c src/wake_web.c -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror -lm \
   --no-entry -sMODULARIZE=1 -sEXPORT_NAME=createSwimmer -sENVIRONMENT=web \
   -sFILESYSTEM=0 -sINITIAL_MEMORY=16777216 \
-  '-sEXPORTED_FUNCTIONS=["_view_init","_view_step","_view_state","_view_field","_jw_init","_jw_step","_jw_answer","_jw_state","_jw_field"]' \
+  '-sEXPORTED_FUNCTIONS=["_view_init","_view_step","_view_state","_view_field","_jw_init","_jw_step","_jw_answer","_jw_state","_jw_field","_wv_init","_wv_step","_wv_state","_wv_field","_wv_trace","_wv_trace_count","_wv_trace_dt"]' \
   '-sEXPORTED_RUNTIME_METHODS=["HEAPF32"]' -o dist/physics.js
-cp web/index.html web/style.css web/app.js dist/
+cp web/index.html web/wake.html web/style.css web/app.js web/wake.js dist/
 cp assets/hero-fish.png assets/pond.jpg dist/assets/
 python3 - <<'PY'
 from pathlib import Path

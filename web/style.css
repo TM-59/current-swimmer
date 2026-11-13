@@ -96,3 +96,33 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 12px;bo
   h1{font-size:30px;margin:8px 0}h1 br,#welcome p br{display:none}#welcome{padding:4% 5%}#welcome p:not(.eyebrow){margin:4px 0 10px}#welcome small{margin-top:8px}
   aside{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:16px}.notes{grid-column:1/-1}
 }
+
+/* Behind a post (wake.html). The same rules: text >= 14 CSS px, every target >= 44 x 44 CSS px. */
+a.nav{display:inline-flex;align-items:center;min-height:44px;min-width:44px;padding:0 12px;border:1px solid var(--line);border-radius:5px;color:var(--mint);font-size:15px;text-decoration:none}
+a.nav:hover{border-color:var(--muted)}a.nav:focus-visible{outline:2px solid var(--copper);outline-offset:3px}
+.pool-link{margin:10px 0 0}
+.wk-main{grid-template-columns:minmax(0,1fr) 300px}
+.wk-panel{min-width:0}
+.wk-field{position:relative;width:100%;aspect-ratio:2/1;border:1px solid #45616a;border-radius:6px;overflow:hidden;background:#12333e}
+#wk-water{display:block;width:100%;height:100%}
+.wk-caption{font-size:14px;color:var(--muted);margin:10px 0}
+.wk-controls{display:grid;gap:6px;margin:12px 0}
+.wk-controls label{font-size:15px;display:flex;justify-content:space-between;gap:10px}
+.wk-controls output{font-variant-numeric:tabular-nums;color:var(--copper);font-weight:650}
+.wk-controls p{font-size:14px;color:var(--muted);margin:0}
+#wk-re{width:100%;min-height:44px;margin:0;accent-color:var(--copper)}
+.wk-buttons{display:flex;flex-wrap:wrap;gap:8px}
+#wk-forces{display:block;width:100%;height:180px;margin-top:8px;border:1px solid var(--line);border-radius:4px}
+.wk-chart-label{margin-top:14px}
+.wk-cd{color:#ff8a65}.wk-cl{color:#9bc9ff}
+.wk-band{margin-top:12px}
+.wk-band-bar{position:relative;height:22px;border:1px solid var(--line);border-radius:4px;background:#0a1f25}
+.wk-band-ok{position:absolute;top:0;bottom:0;background:#2e6b4a}
+.wk-mark-fit,.wk-mark-st{position:absolute;top:-4px;bottom:-4px;width:4px;margin-left:-2px;border-radius:2px}
+.wk-mark-fit{background:#c9d8d2}.wk-mark-st{background:var(--copper)}
+.wk-band-scale{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);margin-top:2px}
+.wk-band p,.wk-compare{font-size:14px;color:#d8e6df;margin:8px 0}
+@media(max-width:760px){.wk-main{grid-template-columns:1fr}.wk-field{aspect-ratio:2/1}}
+@media(orientation:landscape) and (max-height:520px){.wk-main{display:grid;grid-template-columns:minmax(0,1fr) 248px;padding:8px 12px}.wk-field{max-height:calc(100svh - 120px)}}
+.wake-page sub{font-size:14px;line-height:1}
+@media(orientation:landscape) and (max-height:520px){.wake-page aside{display:block;margin-top:0}}

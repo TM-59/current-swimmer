@@ -5,6 +5,7 @@
 
 #include "fluid.h"
 #include "swimmer.h"
+#include "wake.h"
 
 /* Number of text rows needed to draw an n x n field with half-block characters. */
 int render_rows(const Fluid *f);
@@ -14,5 +15,8 @@ size_t render_frame(const Fluid *f, const Swimmer *s, char *buf, size_t cap);
 
 /* Write the vorticity field and the swimmer as a self-contained SVG. Returns 0 on success. */
 int render_field_svg(const Fluid *f, const Swimmer *s, const char *path);
+
+/* Write the vorticity of the cylinder wake (M2) as a self-contained SVG, axes in diameters. */
+int render_wake_svg(const Wake *w, const char *path, const char *title);
 
 #endif
