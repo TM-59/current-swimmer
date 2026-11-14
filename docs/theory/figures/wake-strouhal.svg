@@ -4,11 +4,11 @@
 <line x1="70.0" y1="44" x2="70.0" y2="344" stroke="#e3e3e3"/>
 <line x1="70" y1="344.0" x2="700" y2="344.0" stroke="#e3e3e3"/>
 <text x="70.0" y="362" text-anchor="middle" fill="#444">60</text>
-<text x="62" y="348.0" text-anchor="end" fill="#444">0.133</text>
+<text x="62" y="348.0" text-anchor="end" fill="#444">0.132</text>
 <line x1="196.0" y1="44" x2="196.0" y2="344" stroke="#e3e3e3"/>
 <line x1="70" y1="284.0" x2="700" y2="284.0" stroke="#e3e3e3"/>
 <text x="196.0" y="362" text-anchor="middle" fill="#444">88</text>
-<text x="62" y="288.0" text-anchor="end" fill="#444">0.151</text>
+<text x="62" y="288.0" text-anchor="end" fill="#444">0.15</text>
 <line x1="322.0" y1="44" x2="322.0" y2="344" stroke="#e3e3e3"/>
 <line x1="70" y1="224.0" x2="700" y2="224.0" stroke="#e3e3e3"/>
 <text x="322.0" y="362" text-anchor="middle" fill="#444">116</text>
@@ -16,7 +16,7 @@
 <line x1="448.0" y1="44" x2="448.0" y2="344" stroke="#e3e3e3"/>
 <line x1="70" y1="164.0" x2="700" y2="164.0" stroke="#e3e3e3"/>
 <text x="448.0" y="362" text-anchor="middle" fill="#444">144</text>
-<text x="62" y="168.0" text-anchor="end" fill="#444">0.188</text>
+<text x="62" y="168.0" text-anchor="end" fill="#444">0.187</text>
 <line x1="574.0" y1="44" x2="574.0" y2="344" stroke="#e3e3e3"/>
 <line x1="70" y1="104.0" x2="700" y2="104.0" stroke="#e3e3e3"/>
 <text x="574.0" y="362" text-anchor="middle" fill="#444">172</text>
@@ -28,12 +28,14 @@
 <rect x="70" y="44" width="630" height="300" fill="none" stroke="#888"/>
 <text x="385" y="388" text-anchor="middle" fill="#222">Re</text>
 <text transform="translate(16 194) rotate(-90)" text-anchor="middle" fill="#222">St = f D / U</text>
-<polyline fill="none" stroke="#2471a3" stroke-width="2" points="70.0,275.0 160.0,234.6 250.0,208.1 475.0,169.6 700.0,147.0 "/>
-<rect x="78" y="52" width="12" height="12" fill="#2471a3"/><text x="96" y="63" fill="#222">measured St</text>
-<polyline fill="none" stroke="#888888" stroke-width="2" points="70.0,330.4 160.0,268.8 250.0,231.8 475.0,182.5 700.0,157.9 "/>
+<polyline fill="none" stroke="#2471a3" stroke-width="2" points="70.0,273.5 160.0,233.0 250.0,206.2 475.0,166.4 700.0,142.7 "/>
+<rect x="78" y="52" width="12" height="12" fill="#2471a3"/><text x="96" y="63" fill="#222">measured St, default channel</text>
+<polyline fill="none" stroke="#888888" stroke-width="2" points="70.0,326.0 160.0,265.4 250.0,229.0 475.0,180.5 700.0,156.3 "/>
 <rect x="228" y="52" width="12" height="12" fill="#888888"/><text x="246" y="63" fill="#222">Roshko 1954 fit</text>
-<polyline fill="none" stroke="#27ae60" stroke-width="2" points="70.0,255.0 160.0,255.0 250.0,255.0 475.0,255.0 700.0,255.0 "/>
-<rect x="378" y="52" width="12" height="12" fill="#27ae60"/><text x="396" y="63" fill="#222">band 0.16</text>
+<polyline fill="none" stroke="#7d3c98" stroke-width="2" points="70.0,330.4 160.0,275.1 250.0,237.8 475.0,176.1 700.0,132.2 "/>
+<rect x="378" y="52" width="12" height="12" fill="#7d3c98"/><text x="396" y="63" fill="#222">Williamson 1989 fit</text>
+<polyline fill="none" stroke="#27ae60" stroke-width="2" points="70.0,251.9 160.0,251.9 250.0,251.9 475.0,251.9 700.0,251.9 "/>
+<rect x="528" y="52" width="12" height="12" fill="#27ae60"/><text x="546" y="63" fill="#222">band 0.16</text>
 <polyline fill="none" stroke="#27ae60" stroke-width="2" points="70.0,57.6 160.0,57.6 250.0,57.6 475.0,57.6 700.0,57.6 "/>
-<rect x="528" y="52" width="12" height="12" fill="#27ae60"/><text x="546" y="63" fill="#222">band 0.22</text>
+<rect x="678" y="52" width="12" height="12" fill="#27ae60"/><text x="696" y="63" fill="#222">band 0.22</text>
 </svg>

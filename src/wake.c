@@ -177,9 +177,9 @@ static void diffuse(Wake *w, float dt)
     }
 }
 
-/* Removes the solid fraction of every face velocity; the momentum removed per unit time is the force
- * the water exerts on the cylinder (density 1, per unit span). */
-static void penalize(Wake *w, float dt)
+/* Removes the solid fraction of every face velocity; the momentum removed is an impulse the water gives
+ * to the cylinder (density 1, per unit span), added to (*ix, *iy). */
+static void penalize(Wake *w, double *ix, double *iy)
 {
     double fx = 0.0, fy = 0.0, area = (double)w->h * w->h;
     for (size_t k = 0; k < u_count(w); k++)
@@ -192,8 +192,8 @@ static void penalize(Wake *w, float dt)
             fy += (double)w->chiv[k] * w->v[k];
             w->v[k] *= 1.0f - w->chiv[k];
         }
-    w->fx = fx * area / dt;
-    w->fy = fy * area / dt;
+    *ix += fx * area;
+    *iy += fy * area;
 }
 
 static float cell_div(const Wake *w, int i, int j)
@@ -201,13 +201,17 @@ static float cell_div(const Wake *w, int i, int j)
     return (w->u[U_(w, i + 1, j)] - w->u[U_(w, i, j)] + w->v[V_(w, i, j + 1)] - w->v[V_(w, i, j)]) / w->h;
 }
 
-/* Exact discrete projection: solve div(grad phi) = div u with phi = 0 on the outflow face and no
+/* Exact discrete projection: solve div(beta grad phi) = div u with phi = 0 on the outflow face and no
  * correction through the inflow face or the walls (SOR to a residual tolerance, warm-started from the
- * last step), then u -= grad phi. Afterwards the discrete divergence of every cell is below PRESSURE_TOL. */
-static void project(Wake *w)
+ * last step), then u -= beta grad phi. Afterwards the discrete divergence of every cell is below
+ * PRESSURE_TOL. beta = 1 - chi is the open fraction of a face (1 everywhere when aware = 0, the M2 scheme):
+ * a solid face receives no pressure correction, so no water is pushed through the cylinder, and the
+ * impulse chi grad phi it withheld is the pressure impulse on the cylinder, added to (*ix, *iy). */
+static void project(Wake *w, int aware, double *ix, double *iy)
 {
     int nx = w->nx, ny = w->ny;
-    float h2 = w->h * w->h;
+    float h2 = w->h * w->h, s = aware ? 1.0f : 0.0f;
+    const float *cu = w->chiu, *cv = w->chiv;
     for (int j = 0; j < ny; j++)
         for (int i = 0; i < nx; i++) w->div[P_(w, i, j)] = cell_div(w, i, j) * h2;
     float *p = w->p;
@@ -215,12 +219,13 @@ static void project(Wake *w)
     for (; sweep < PRESSURE_MAX; sweep++) {
         for (int j = 0; j < ny; j++)
             for (int i = 0; i < nx; i++) {
-                float sum = 0.0f, k = 0.0f;
-                if (i > 0) { sum += p[P_(w, i - 1, j)]; k += 1.0f; }
-                if (i < nx - 1) { sum += p[P_(w, i + 1, j)]; k += 1.0f; } else k += 2.0f;
-                if (j > 0) { sum += p[P_(w, i, j - 1)]; k += 1.0f; }
-                if (j < ny - 1) { sum += p[P_(w, i, j + 1)]; k += 1.0f; }
+                float sum = 0.0f, k = 0.0f, b;
+                if (i > 0) { b = 1.0f - s * cu[U_(w, i, j)]; sum += b * p[P_(w, i - 1, j)]; k += b; }
+                if (i < nx - 1) { b = 1.0f - s * cu[U_(w, i + 1, j)]; sum += b * p[P_(w, i + 1, j)]; k += b; } else k += 2.0f;
+                if (j > 0) { b = 1.0f - s * cv[V_(w, i, j)]; sum += b * p[P_(w, i, j - 1)]; k += b; }
+                if (j < ny - 1) { b = 1.0f - s * cv[V_(w, i, j + 1)]; sum += b * p[P_(w, i, j + 1)]; k += b; }
                 size_t c = P_(w, i, j);
+                if (k < 1e-6f) { p[c] = 0.0f; continue; } /* a cell sealed inside the solid */
                 float target = (sum - w->div[c]) / k;
                 p[c] += SOR * (target - p[c]);
             }
@@ -230,31 +235,44 @@ static void project(Wake *w)
                 for (int i = 0; i < nx; i++) {
                     float r = -w->div[P_(w, i, j)];
                     float pc = p[P_(w, i, j)];
-                    if (i > 0) r += p[P_(w, i - 1, j)] - pc;
-                    if (i < nx - 1) r += p[P_(w, i + 1, j)] - pc; else r += -2.0f * pc;
-                    if (j > 0) r += p[P_(w, i, j - 1)] - pc;
-                    if (j < ny - 1) r += p[P_(w, i, j + 1)] - pc;
+                    if (i > 0) r += (1.0f - s * cu[U_(w, i, j)]) * (p[P_(w, i - 1, j)] - pc);
+                    if (i < nx - 1) r += (1.0f - s * cu[U_(w, i + 1, j)]) * (p[P_(w, i + 1, j)] - pc); else r += -2.0f * pc;
+                    if (j > 0) r += (1.0f - s * cv[V_(w, i, j)]) * (p[P_(w, i, j - 1)] - pc);
+                    if (j < ny - 1) r += (1.0f - s * cv[V_(w, i, j + 1)]) * (p[P_(w, i, j + 1)] - pc);
                     if (fabsf(r) > worst) worst = fabsf(r);
                 }
             if (worst / h2 < PRESSURE_TOL) { sweep++; break; }
         }
     }
     w->sweeps = sweep;
+    double fx = 0.0, fy = 0.0;
     for (int j = 0; j < ny; j++) {
-        for (int i = 1; i < nx; i++) w->u[U_(w, i, j)] -= (p[P_(w, i, j)] - p[P_(w, i - 1, j)]) / w->h;
+        for (int i = 1; i < nx; i++) {
+            float g = (p[P_(w, i, j)] - p[P_(w, i - 1, j)]) / w->h, chi = s * cu[U_(w, i, j)];
+            w->u[U_(w, i, j)] -= (1.0f - chi) * g;
+            fx -= (double)chi * g;
+        }
         w->u[U_(w, nx, j)] -= (-2.0f * p[P_(w, nx - 1, j)]) / w->h;
     }
     for (int j = 1; j < ny; j++)
-        for (int i = 0; i < nx; i++) w->v[V_(w, i, j)] -= (p[P_(w, i, j)] - p[P_(w, i, j - 1)]) / w->h;
+        for (int i = 0; i < nx; i++) {
+            float g = (p[P_(w, i, j)] - p[P_(w, i, j - 1)]) / w->h, chi = s * cv[V_(w, i, j)];
+            w->v[V_(w, i, j)] -= (1.0f - chi) * g;
+            fy -= (double)chi * g;
+        }
+    if (ix) *ix += fx * h2;
+    if (iy) *iy += fy * h2;
     bc_u(w, w->u);
     bc_v(w, w->v);
 }
 
-/* Solid fraction of a face at distance d from the centre: 1 deep inside, 0 outside, linear over one cell. */
-static float solid(const Wake *w, float x, float y)
+/* Solid fraction of a face at distance d from the centre: 1 deep inside, 0 outside, linear over one cell
+ * centred on the radius plus `shift` cells. */
+static float solid(const Wake *w, float shift, int sharp, float x, float y)
 {
     float d = sqrtf((x - w->cx) * (x - w->cx) + (y - w->cy) * (y - w->cy));
-    return clampf((w->r - d) / w->h + 0.5f, 0.0f, 1.0f);
+    if (sharp) return d <= w->r + shift * w->h ? 1.0f : 0.0f;
+    return clampf((w->r - d) / w->h + 0.5f + shift, 0.0f, 1.0f);
 }
 
 int wake_init(Wake *w, int cells_per_diameter, float reynolds)
@@ -264,15 +282,23 @@ int wake_init(Wake *w, int cells_per_diameter, float reynolds)
 
 int wake_init_channel(Wake *w, int cells_per_diameter, float reynolds, int height)
 {
+    WakeSetup setup = {cells_per_diameter, reynolds, WAKE_LX, height, WAKE_CX, 0.0f, 0};
+    return wake_init_setup(w, &setup);
+}
+
+int wake_init_setup(Wake *w, const WakeSetup *setup)
+{
     memset(w, 0, sizeof *w);
-    if (cells_per_diameter < 2 || reynolds <= 0.0f || height < 2) return -1;
-    w->n = cells_per_diameter;
-    w->nx = WAKE_LX * cells_per_diameter;
-    w->ny = height * cells_per_diameter;
-    w->h = 1.0f / (float)cells_per_diameter;
-    w->visc = 1.0f / reynolds;
-    w->cx = (float)WAKE_CX;
-    w->cy = 0.5f * (float)height;
+    if (setup->cells < 2 || setup->reynolds <= 0.0f || setup->height < 2 || setup->upstream < 1 ||
+        setup->length < setup->upstream + 2) return -1;
+    w->n = setup->cells;
+    w->length = setup->length;
+    w->nx = setup->length * setup->cells;
+    w->ny = setup->height * setup->cells;
+    w->h = 1.0f / (float)setup->cells;
+    w->visc = 1.0f / setup->reynolds;
+    w->cx = (float)setup->upstream;
+    w->cy = 0.5f * (float)setup->height;
     w->r = 0.5f;
     float **uu[] = {&w->u, &w->u0, &w->u1, &w->u2, &w->chiu};
     float **vv[] = {&w->v, &w->v0, &w->v1, &w->v2, &w->chiv};
@@ -288,7 +314,7 @@ int wake_init_channel(Wake *w, int cells_per_diameter, float reynolds, int heigh
     for (int j = -1; j <= w->ny; j++)
         for (int i = 0; i <= w->nx; i++) {
             size_t k = U_(w, i, j);
-            w->chiu[k] = solid(w, (float)i * h, ((float)j + 0.5f) * h);
+            w->chiu[k] = solid(w, setup->wall_shift, setup->sharp_wall, (float)i * h, ((float)j + 0.5f) * h);
             w->u[k] = INFLOW * (1.0f - w->chiu[k]);
         }
     /* The nudge: a weak cross-flow blob behind the cylinder. Without it a mirror-symmetric start would
@@ -297,12 +323,12 @@ int wake_init_channel(Wake *w, int cells_per_diameter, float reynolds, int heigh
         for (int i = -1; i <= w->nx; i++) {
             size_t k = V_(w, i, j);
             float x = ((float)i + 0.5f) * h - (w->cx + 1.5f), y = (float)j * h - w->cy;
-            w->chiv[k] = solid(w, ((float)i + 0.5f) * h, (float)j * h);
+            w->chiv[k] = solid(w, setup->wall_shift, setup->sharp_wall, ((float)i + 0.5f) * h, (float)j * h);
             w->v[k] = 0.3f * expf(-(x * x + y * y) / 0.5f) * (1.0f - w->chiv[k]);
         }
     bc_u(w, w->u);
     bc_v(w, w->v);
-    project(w);
+    project(w, 1, NULL, NULL);
     return 0;
 }
 
@@ -320,8 +346,12 @@ void wake_step(Wake *w, float dt)
     advect(w, dt);
     diffuse(w, dt);
     for (int j = 0; j < w->ny; j++) w->u[U_(w, w->nx, j)] = w->u[U_(w, w->nx - 1, j)];
-    penalize(w, dt);
-    project(w);
+    double ix = 0.0, iy = 0.0;
+    penalize(w, &ix, &iy);
+    project(w, !w->split_penalty, &ix, &iy);
+    w->fx = ix / dt;
+    w->fy = iy / dt;
+    w->dt = dt;
     w->t += dt;
 }
 
@@ -347,9 +377,35 @@ float wake_max_divergence(const Wake *w)
     return worst;
 }
 
+float wake_control_volume_drag(const Wake *w, float half)
+{
+    int n = w->n, i0 = (int)lroundf((w->cx - half) * (float)n), i1 = (int)lroundf((w->cx + half) * (float)n);
+    int j0 = (int)lroundf((w->cy - half) * (float)n), j1 = (int)lroundf((w->cy + half) * (float)n);
+    if (i0 < 1 || i1 > w->nx - 1 || j0 < 1 || j1 > w->ny - 1 || w->dt <= 0.0f) return 0.0f;
+    double h = w->h, nu = w->visc, f = 0.0;
+    /* Left (+) and right (-) faces: u is stored there; momentum flux u u, pressure, normal viscous stress. */
+    for (int j = j0; j < j1; j++)
+        for (int side = 0; side < 2; side++) {
+            int i = side ? i1 : i0;
+            double u = w->u[U_(w, i, j)], p = 0.5 * (w->p[P_(w, i - 1, j)] + w->p[P_(w, i, j)]) / w->dt;
+            double dudx = (w->u[U_(w, i + 1, j)] - w->u[U_(w, i - 1, j)]) / (2.0 * h);
+            f += (side ? -1.0 : 1.0) * (u * u + p - nu * dudx) * h;
+        }
+    /* Bottom (+) and top (-) faces, at the cell corners (trapezoid rule): flux u v and the shear stress. */
+    for (int i = i0; i <= i1; i++)
+        for (int side = 0; side < 2; side++) {
+            int j = side ? j1 : j0;
+            double u = 0.5 * (w->u[U_(w, i, j - 1)] + w->u[U_(w, i, j)]);
+            double v = 0.5 * (w->v[V_(w, i - 1, j)] + w->v[V_(w, i, j)]);
+            double dudy = (w->u[U_(w, i, j)] - w->u[U_(w, i, j - 1)]) / h;
+            f += (side ? -1.0 : 1.0) * ((i == i0 || i == i1) ? 0.5 : 1.0) * (u * v - nu * dudy) * h;
+        }
+    return (float)(2.0 * f / (INFLOW * INFLOW));
+}
+
 float wake_recirculation_length(const Wake *w)
 {
-    float rear = w->cx + w->r, step = 0.25f * w->h, end = (float)WAKE_LX;
+    float rear = w->cx + w->r, step = 0.25f * w->h, end = (float)w->length;
     int reversed = 0;
     for (float x = rear + w->h; x < end; x += step) {
         float u = sample_u(w, w->u, x, w->cy, NULL, NULL);

@@ -2,6 +2,8 @@
 
 Water flowing past a fixed circular cylinder, the classic problem the pool of pages 1–4 cannot show (there the disc is not an obstacle, S13). This page is a separate solver, `src/wake.c`; the pool, the swimmer and Upstream are unchanged. Units: the cylinder diameter $D = 1$, the inflow speed $U = 1$, density 1, so times are in $D/U$ and forces in $\rho U^2 D$ per unit span. Measured numbers are quoted by their id in [figures/values.md](figures/values.md); the literature values are quoted from the papers named, not re-derived here.
 
+**Source status.** Roshko's original NACA report, equation 2a, was checked. The original Dennis & Chang table was not accessible and its values remain unverified. The Qu et al., Gautier et al. and Williamson 1989 figures and values added to the generated plots and table are also unverified against their original papers; treat these as provisional comparisons, not validated reference data.
+
 [Back to the index](README.md)
 
 ## S21 — The problem and its one number: Re = UD/ν in a channel
@@ -34,23 +36,23 @@ The code solves the incompressible Navier–Stokes equations (S01) in a channel 
 flowchart LR
     A["advect u, v (MacCormack, RK2 back-trace, clamped)"] --> D["diffuse (backward Euler, 12 sweeps)"]
     D --> O["outflow face: copy the last interior face"]
-    O --> P["penalise: u ← (1 − χ) u on every face, force = removed momentum / dt"]
-    P --> Q["project: SOR until max |div u| < 1e-4, u −= grad φ"]
+    O --> P["penalise: u ← (1 − χ) u on every face"]
+    P --> Q["project with open face fraction 1 − χ; accumulate pressure impulse"]
 ```
 
 ![Lift at Re 100: with the first-order step of fluid.c the street is weaker (smaller swing) and slower (lower frequency)](figures/wake-advection.svg)
 
 **Code.** `wake_step` calls `advect`, `diffuse`, `penalize` and `project` (static) in `src/wake.c`; `trace` is the midpoint back-trace and `interp` the clamped bilinear sample. `first_order` in the `Wake` struct switches back to the plain semi-Lagrangian step for comparison. `wake_max_divergence` and `wake_sample` read the result.
 
-**Tests.** `test_projection_and_mass`: after 200 steps the largest cell divergence is below $1\times10^{-4}$. Measured at Re 100: `wake-div` = $4.6\times10^{-5}$ after the last step, `wake-sweeps` = 66 sweeps per step on average. The first-order step gives a lift swing of `wake-first-order-cl` = 0.33 of the MacCormack one and a Strouhal number of `wake-first-order-st` = 0.140 instead of 0.174: numerical viscosity lowers the effective Re.
+**Tests.** `test_projection_and_mass`: after 200 steps the largest cell divergence is below $1\times10^{-4}$. Measured at Re 100: `wake-div` = $8.4\times10^{-5}$ after the last step, `wake-sweeps` = 63 sweeps per step on average. The first-order step gives a lift swing of `wake-first-order-cl` = 0.41 of the MacCormack one and a Strouhal number of `wake-first-order-st` = 0.140 instead of 0.174: numerical viscosity lowers the effective Re.
 
 ## S23 — The cylinder as a penalised obstacle, and the force on it
 
-**Statement.** The cylinder is a solid fraction $\chi\in[0,1]$ on every velocity face: 1 farther than half a cell inside the radius, 0 farther than half a cell outside, linear between. Each step removes the solid part of the velocity, $\mathbf u \leftarrow (1-\chi)\mathbf u$ — the limit $\eta\to 0$ of the Brinkman penalisation term $-\chi\mathbf u/\eta$ [Angot, Bruneau & Fabrie 1999]. The momentum removed per unit time is the force of the water on the cylinder,
+**Statement.** The cylinder is a solid fraction $\chi\in[0,1]$ on every velocity face: 1 farther than half a cell inside the radius, 0 farther than half a cell outside, linear between. Each step removes the solid part of the velocity, $\mathbf u \leftarrow (1-\chi)\mathbf u$ — the limit $\eta\to 0$ of the Brinkman penalisation term $-\chi\mathbf u/\eta$ [Angot, Bruneau & Fabrie 1999]. The projection uses the open fraction $1-\chi$, and the force includes both the penalisation impulse and the pressure impulse withheld by solid faces,
 
-$$\mathbf F = \frac{h^2}{\Delta t}\sum_{\text{faces}}\chi\,\mathbf u,\qquad C_D = \frac{2F_x}{\rho U^2 D},\qquad C_L = \frac{2F_y}{\rho U^2 D}.$$
+$$\mathbf F = \frac{h^2}{\Delta t}\sum_{\text{faces}}\chi\,(\mathbf u-\nabla\phi),\qquad C_D = \frac{2F_x}{\rho U^2 D},\qquad C_L = \frac{2F_y}{\rho U^2 D}.$$
 
-**Assumptions and where they break.** The wall is spread over one cell, so the body the water sees is slightly larger and rounder than a staircase but not a sharp circle; the force on a coarse grid carries that error (S26). Penalising before the projection leaves a small velocity inside the solid after the step; it is removed again at the next step, and that removed momentum includes the pressure push, so the step-by-step force is noisy and only its average over whole periods is used.
+**Assumptions and where they break.** The wall is spread over one cell; the force on a coarse grid carries that error (S26). The old split projected through the obstacle and produced a centre speed of 0.042 U. The solid-aware projection prevents that leak; its pressure impulse must also be counted. Only the force averaged over whole periods is compared.
 
 **Derivation.** Newton's third law on the control volume of the solid: whatever momentum the penalisation takes out of the water per unit time, the cylinder receives. Averaged over a lift period the transient terms of the momentum balance cancel.
 
@@ -58,11 +60,11 @@ $$\mathbf F = \frac{h^2}{\Delta t}\sum_{\text{faces}}\chi\,\mathbf u,\qquad C_D 
 
 **Code.** `penalize` (static), `solid` (the fraction) and `wake_drag_coefficient`, `wake_lift_coefficient` in `src/wake.c`.
 
-**Tests.** `test_projection_and_mass`: inside the cylinder the water is at rest ($|u|, |v| < 0.05\,U$). `test_shedding` and `test_steady_twin_vortex` check the drag (S25, S24). Measured at Re 100: `wake-cd-100` = 1.68, the drag swing is `wake-cd-amp-100` = 0.026 of the lift swing.
+**Tests.** `test_projection_and_mass` checks the centre is at rest, and `test_solid_aware_projection` compares it with the original split. `test_shedding` checks an independent box momentum balance. At Re 100: `wake-cd-100` = 1.543; the box result differs by 1.4%.
 
 ## S24 — Two regimes: twin eddies below Re ≈ 47, shedding above
 
-**Statement.** Below a critical Reynolds number of about 47 [Provansal, Mathis & Boyer 1987] the flow behind the cylinder is steady: two attached eddies of opposite sign, mirror-symmetric about the centre line, whose length grows with Re (Dennis & Chang 1970: $L/D$ = 0.94 at Re 20, 2.35 at Re 40, measured from the rear point). Above it the symmetric wake is unstable (a Hopf bifurcation) and the eddies leave alternately, so the lift oscillates.
+**Statement.** Below a critical Reynolds number of about 47 [Provansal, Mathis & Boyer 1987] the flow behind the cylinder is steady: two attached eddies of opposite sign, mirror-symmetric about the centre line, whose length grows with Re. The previously quoted Dennis & Chang values of $L/D$ = 0.94 at Re 20 and 2.35 at Re 40 remain unverified against the original table. Above the threshold the symmetric wake is unstable (a Hopf bifurcation) and the eddies leave alternately, so the lift oscillates.
 
 **Assumptions and where they break.** Near the threshold the instability grows slowly; at Re 50 a run of 100 D/U is still growing. The closed-wake length is read where $u$ on the centre line turns positive again; while shedding it is only a snapshot.
 
@@ -74,7 +76,7 @@ $$\mathbf F = \frac{h^2}{\Delta t}\sum_{\text{faces}}\chi\,\mathbf u,\qquad C_D 
 
 **Code.** `wake_recirculation_length` and `wake_vorticity_at` in `src/wake.c`; `render_wake_svg` in `src/render.c` draws the field (also `./current-swimmer --karman`).
 
-**Tests.** `test_steady_twin_vortex` at Re 30 (6 cells per D): lift amplitude below 0.01, a closed eddy between 0.8 D and 2.2 D long, $C_D$ within 1.6–2.6. Measured on 8 cells per D: `wake-clamp-30` = $6\times10^{-5}$, `wake-clamp-40` = 0.0022, `wake-clamp-60` = 0.10. Eddy lengths `wake-lr-20` = 0.66 and `wake-lr-40` = 1.84 are 30 % and 22 % shorter than Dennis & Chang's, and the drag `wake-cd-20` = 2.42, `wake-cd-40` = 1.91 is 18–26 % higher — the same direction as the drag excess of S26.
+**Tests.** `test_steady_twin_vortex` at Re 30 (6 cells per D): lift amplitude below 0.01, a closed eddy between 0.8 D and 2.2 D long, $C_D$ within 1.9–2.25. Measured on 8 cells per D: `wake-clamp-30` = $6\times10^{-5}$, `wake-clamp-40` = 0.0017, `wake-clamp-60` = 0.104. The measured eddy lengths at Re 20 and 40 are 0.66 and 1.75 D; the literature table values above remain unverified.
 
 ## S25 — The Strouhal number: how often the street swings
 
@@ -82,9 +84,9 @@ $$\mathbf F = \frac{h^2}{\Delta t}\sum_{\text{faces}}\chi\,\mathbf u,\qquad C_D 
 
 $$\mathrm{St} = \frac{fD}{U},$$
 
-which for a circular cylinder rises slowly with Re in the laminar range. Roshko (1954) fitted $\mathrm{St} = 0.212\,(1 - 21.2/\mathrm{Re})$ for Re between 50 and 150; the accepted band for Re 100–200 is about 0.16–0.20 [Williamson 1996], and the check of this repository allows 0.16–0.22. The time-averaged drag of an unbounded cylinder is about 1.33 there (two-dimensional simulations, e.g. Park, Kwon & Choi 1998).
+which for a circular cylinder rises slowly with Re in the laminar range. Roshko (1954) fitted $\mathrm{St} = 0.212\,(1 - 21.2/\mathrm{Re})$ for 50 < Re < 150; values at Re 150 and above are extrapolations. The accepted band for Re 100–200 is about 0.16–0.20 [Williamson 1996], and the check of this repository allows 0.16–0.22. The time-averaged drag of an unbounded cylinder is about 1.33 there (two-dimensional simulations, e.g. Park, Kwon & Choi 1998).
 
-**Assumptions and where they break.** $f$ is measured from upward zero crossings of $C_L - \overline{C_L}$, linearly interpolated, over the second half of the run (the start-up is not periodic); at least 3 crossings and a swing of at least 0.01 are required, otherwise no frequency is reported. The fit is taken past its range at Re 200 only as a guide.
+**Assumptions and where they break.** $f$ is measured from upward zero crossings of $C_L - \overline{C_L}$, linearly interpolated, over the second half of the run (the start-up is not periodic); at least 3 crossings and a swing of at least 0.01 are required, otherwise no frequency is reported. The fit is taken outside its stated range at Re 150 and 200 only as a guide.
 
 **Derivation.** Each lift period sheds one vortex from each side; $C_L$ crosses its mean upwards once per period, so $f = (\text{crossings} - 1)/(t_{last} - t_{first})$. Drag is averaged over the same whole periods so that a partial period does not bias it.
 
@@ -94,23 +96,43 @@ which for a circular cylinder rises slowly with Re in the laminar range. Roshko 
 
 **Code.** `wake_stats` and `strouhal_number` in `src/wake.c`; `wake_run` runs a whole case.
 
-**Tests.** `test_stats_on_a_sine` checks the counter on a known signal (frequency to $1\times10^{-4}$). `test_shedding` (6 cells per D, 60 D/U): at Re 100, 150 and 200 the lift swings by more than 0.1 over at least 4 periods, St lies in 0.16–0.22 and rises with Re, and the mean $C_D$ lies in 1.3–1.9 — the lower bound is the unbounded value (walls and a thick wall do not lower drag), the upper bound leaves room for the 24–28 % excess measured on that grid (S26). Measured on 8 cells per D: `wake-st-100` = 0.174, `wake-st-150` = 0.186, `wake-st-200` = 0.193, within 4.3 %, 2.2 % and 1.8 % of Roshko's fit; drag `wake-cd-150` = 1.65, `wake-cd-200` = 1.63.
+**Tests.** `test_stats_on_a_sine` checks the counter on a known signal (frequency to $1\times10^{-4}$). `test_shedding` (6 cells per D, 60 D/U) requires at least four periods, St in 0.16–0.22 and increasing, and $C_D$ in 1.42–1.66. On 8 cells per D the measured St is 0.174, 0.186, 0.194 and the mean drag is 1.543, 1.495, 1.473 at Re 100, 150 and 200 respectively. The 1954 fit is extrapolated outside its stated range at Re 150 and 200.
 
 ## S26 — How far to trust the numbers: grid, time step, blockage
 
-**Statement.** A converged answer should not change when the grid or the time step is refined or the channel widened. At Re 100 the Strouhal number moves by less than 4 % from 8 to 16 cells per diameter and by 1.7 % when the time step is halved; the drag stays 24–28 % above the unbounded literature value on every grid tried, and falls only slowly (2 % from 8 to 16 cells per D).
+**Statement.** The old split projection and the finite domain both raise the measured drag. The revised solver is close to the often-quoted open-water drag of about 1.33 in a 32 × 24 D channel, but the original reference for that number remains unverified. A larger domain and a solid-aware projection, rather than a change to the pool model, account for most of the difference.
 
-**Assumptions and where they break.** Each case is one run of 100 D/U from the same start. The study fixes Re 100; the shedding cases of S25 use 8 cells per D, the unit tests 6. The excess drag is not explained by blockage (widening the channel from 8 D to 24 D lowers it by 3.5 %) nor by the time step (−3.6 %); the remaining candidates are the one-cell penalised wall, which makes the body the water sees a little larger, and the splitting of penalisation from projection. Neither has been isolated here.
+**Assumptions and where they break.** Each run starts identically and lasts 100 D/U, at Re 100 and 8 cells per D unless stated. These are one-factor comparisons, not additive error estimates. The literature comparisons are provisional as noted above.
 
-**Derivation.** Finer grids lower the numerical viscosity of S22, so the effective Re rises and the street sheds faster: St rises from `wake-st-n6` = 0.169 through 0.174 to `wake-st-n12` = 0.178 and `wake-st-n16` = 0.180, and the lift swing approaches its literature value (`wake-clamp-n16` = 0.34 against about 0.33). Blockage speeds the flow past the cylinder and raises St: in channels 16 D and 24 D high St falls back to `wake-st-h16` = 0.169 and `wake-st-h24` = 0.169, within 1.2 % of Roshko's fit.
+**Derivation.** Subtracting the measured values separates the effects at the chosen resolution; it does not prove that the effects add independently.
+
+| Comparison | Mean C_D | St |
+|---|---:|---:|
+| Solid-aware projection, 16 × 8 D, inflow 4 D upstream | 1.5428 | 0.1741 |
+| Old penalty then plain projection, same domain | 1.6828 | 0.1743 |
+| Solid-aware, half time step | 1.5347 | 0.1773 |
+| Binary sharp-face wall, same nominal radius | 1.5992 | 0.1770 |
+| Blurred wall shifted inward by half a cell | 1.5969 | 0.1817 |
+| Channel 16 × 24 D, inflow 4 D upstream | 1.4919 | 0.1691 |
+| Channel 24 × 8 D, inflow 8 D upstream | 1.4918 | 0.1716 |
+| Channel 24 × 16 D, inflow 8 D upstream | 1.3851 | 0.1622 |
+| Channel 32 × 24 D, inflow 12 D upstream | 1.3449 | 0.1588 |
+
+The sharp mask changes both wall representation and the effective staircase geometry. It increases rather than eliminates drag at this resolution. The half-step changes drag by −0.5%; the old split is 9.1% higher than the revised projection, while the independent box balance differs by 1.4%. Widening and moving the inflow together reduce drag by 12.8%, so blockage alone is not the whole domain effect. On 6/8/12/16 cells per D the revised drag is 1.586/1.543/1.549/1.534; it has not been demonstrated grid-converged. In the largest channel at Re 150 and 200, drag is 1.320 and 1.310; St is 0.173 and 0.181. The latter is below the existing small-channel CI band, which remains a check of the default domain only.
+
+The sharp-wall case is reproducible with `cc -std=c11 -O2 src/wake.c tests/wake_wall_study.c -lm -o wake-wall-study && ./wake-wall-study`. Its source selects a binary mask but leaves the default mask unchanged.
 
 ![Re 100 on 6, 8, 12 and 16 cells per diameter](figures/wake-convergence.svg)
 
 ![Re 100 in channels 8, 16 and 24 diameters high](figures/wake-blockage.svg)
 
-**Code.** `wake_init_channel` (channel height) and `wake_dt` (step) in `src/wake.c`; the studies are run by `fig_wake` in `tests/theory_figs.c` (sixteen runs, in parallel processes).
+![Re 100 in progressively larger domains](figures/wake-domain.svg)
 
-**Tests.** Measurements only: drag `wake-cd-n6` = 1.71, `wake-cd-n12` = 1.68, `wake-cd-n16` = 1.65; half step `wake-st-dt2` = 1.017 and `wake-cd-dt2` = 0.964 of the full-step values; blockage `wake-cd-h16` = 1.63, `wake-cd-h24` = 1.62. The CI check (`test_shedding`) uses the coarsest grid, whose St (0.169) is the lowest of the four, so passing it on 6 cells per D does not depend on the refinement.
+![Drag with the original split and the solid-aware projection](figures/wake-splitting.svg)
+
+**Code.** `wake_init_setup`, `wake_init_channel` and `wake_dt` in `src/wake.c`; `fig_wake` in `tests/theory_figs.c` runs the main studies, while `tests/wake_wall_study.c` compares a sharp mask.
+
+**Tests.** `test_solid_aware_projection` checks the split comparison and `test_shedding` checks the default-domain drag band and box balance. The larger-domain and wall-shape results are measurements, not CI assertions.
 
 ## References
 
