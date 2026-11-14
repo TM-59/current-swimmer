@@ -63,4 +63,88 @@ Units: the pond is the unit square (lengths in domain widths), times in seconds,
 | `jet-linear` | peak at 0.62 over peak at 0.30, against the ratio of the strengths (a jet is not linear in its forcing) | 1.42096 | 2.06667 | 3.12e-01 |
 | `stamina-empty-pace` | seconds of strokes until the swimmer is winded, with Silt setting the pace (theory 1 / (0.50 x 0.60)) | 3.34 | 3.33333 | 2.00e-03 |
 | `stamina-empty-alone` | the same with the pace effect off (theory 1 / 0.50) | 2.02 | 2 | 1.00e-02 |
-| `stamina-back` | seconds winded before strokes work again (t
+| `stamina-back` | seconds winded before strokes work again (theory 0.35 / 0.25) | 1.42 | 1.4 | 1.43e-02 |
+| `ease-time` | seconds a coasting swimmer waits for the jet to weaken the first time (theory EASE_SECONDS 10) | 10 | 10 | 0.00e+00 |
+| `ease-factor` | jet strength after 35 s of coasting over the start (theory 0.85^3) | 0.614125 | 0.614125 | 1.35e-07 |
+| `coast-drift-x` | x of the disc after coasting for 35 s from 0.12: the eddies beside the jet carry it | 0.97 | 0 | 9.70e-01 |
+| `ease-no-sweep` | sweeps counted in those 35 s (the coasting disc is carried round by the return flow and never loses 0.20 of ground) | 0 | 0 | 0.00e+00 |
+| `sweep-count` | sweeps added when the swimmer is found 0.26 behind its best x (theory 1; the rule is a loss above 0.20) | 1 | 1 | 0.00e+00 |
+| `sweep-on-teleport` | sweeps counted before that, when the test moved the swimmer forward by hand (theory 0) | 0 | 0 | 0.00e+00 |
+| `sweep-ease` | jet strength after the sweep over before (theory EASE_FLOW 0.85) | 0.85 | 0.85 | 7.79e-09 |
+| `sweep-banner` | banner raised (theory JB_SWEPT = 2) | 2 | 2 | 0.00e+00 |
+| `gate-clears` | reach index after a step taken 0.028 from the gate (theory 1: reach 1 cleared) | 1 | 1 | 0.00e+00 |
+| `gate-scene` | scene opened (theory JS_CULVERT = 1) | 1 | 1 | 0.00e+00 |
+| `ditch-marks` | marks on the ditch route (theory 3) | 3 | 3 | 0.00e+00 |
+| `ditch-flow` | jet strength in the ditch (theory 0.60 x 0.60) | 0.36 | 0.36 | 3.97e-08 |
+| `weir-hold-need` | journey_hold_need at the weir (theory WEIR_HOLD 18 s) | 18 | 18 | 0.00e+00 |
+| `hold-radius` | journey_hold_radius (theory 0.14) | 0.14 | 0.14 | 4.26e-09 |
+| `weir-hold-time` | seconds held on the weir mark before the next mark opens (theory 18) | 18 | 18 | 0.00e+00 |
+| `scenes-shown` | scenes opened in one whole journey (theory 8: outlet, culvert, eddy, warm, taste, reeds, surge, spring) | 8 | 8 | 0.00e+00 |
+| `ending-stay` | journey_ending after staying with Silt (theory 0) | 0 | 0 | 0.00e+00 |
+| `ending-leave` | journey_ending after leaving at once (theory 1) | 1 | 1 | 0.00e+00 |
+| `journey-time-stay` | swimming seconds of that journey, staying (one run of the bench policy; no theory) | 100.035 | 0 | 1.00e+02 |
+| `journey-time-leave` | the same policy leaving at once | 100.595 | 0 | 1.01e+02 |
+| `heavy-scenes` | scenes that journey_heavy marks (theory 2: reeds, surge) | 2 | 2 | 0.00e+00 |
+| `choice-scenes` | scenes with two options (theory 2: culvert, reeds) | 2 | 2 | 0.00e+00 |
+| `scene-first` | scene open right after journey_init (theory JS_OUTLET = 0) | 0 | 0 | 0.00e+00 |
+| `ending-before` | journey_ending before the spring (theory -1) | -1 | -1 | 0.00e+00 |
+| `wake-div` | largest |div u| in any cell after the last step of the Re 100 run [U/D] (theory 0; solver tolerance 1e-4) | 8.42232e-05 | 0 | 8.42e-05 |
+| `wake-mass` | outflow / inflow - 1 at the end of the Re 100 run (theory 0) | 3.83984e-05 | 0 | 3.84e-05 |
+| `wake-sweeps` | mean pressure sweeps per step, Re 100, 8 cells per D (no theory; warm start) | 63.168 | 0 | 6.32e+01 |
+| `wake-first-order-cl` | C_L amplitude at Re 100 with first-order advection over the MacCormack amplitude (no theory: smaller means more numerical damping) | 0.410527 | 1 | 5.89e-01 |
+| `wake-first-order-st` | Strouhal number at Re 100 with first-order advection (0 = no shedding found) | 0.139834 | 0.167056 | 1.63e-01 |
+| `wake-cd-100` | mean C_D over whole lift periods, Re 100, 8 cells per D, default channel 16 x 8 D (theory: 1.317 in open water, Qu et al. 2013) | 1.54284 | 1.317 | 1.71e-01 |
+| `wake-cd-amp-100` | C_D amplitude over C_L amplitude at Re 100 (drag swings at twice the lift frequency, much smaller) | 0.0245147 | 0 | 2.45e-02 |
+| `wake-cd-split` | mean C_D at Re 100 with the M2 scheme (penalty, then a plain projection) over the value with the solid-aware projection (theory 1) | 1.09075 | 1 | 9.07e-02 |
+| `wake-cd-split-dt2` | the M2 scheme: C_D at half the time step over C_D at the full step (theory 1; a splitting error shrinks with the step) | 0.963858 | 1 | 3.61e-02 |
+| `wake-inside` | speed at the cylinder centre after the last step, solid-aware projection [U] (theory 0) | 0 | 0 | 0.00e+00 |
+| `wake-inside-split` | speed at the cylinder centre after the last step, M2 scheme [U] (theory 0: this is the leak) | 0.0418217 | 0 | 4.18e-02 |
+| `wake-cd-box` | mean C_D from the momentum balance of a 3 D box over the mean C_D from the force on the faces, Re 100 (theory 1) | 1.01425 | 1 | 1.42e-02 |
+| `wake-cd-box-split` | the same ratio for the M2 scheme (theory 1) | 0.984511 | 1 | 1.55e-02 |
+| `wake-clamp-30` | C_L amplitude at Re 30 (theory 0: steady) | 6.22062e-05 | 0 | 6.22e-05 |
+| `wake-clamp-40` | C_L amplitude at Re 40 (theory 0: steady) | 0.00172901 | 0 | 1.73e-03 |
+| `wake-clamp-60` | C_L amplitude at Re 60 (shedding; no single theory value) | 0.103986 | 0 | 1.04e-01 |
+| `wake-lr-20` | closed wake L/D at Re 20, default channel (theory: 0.94 in open water, Dennis & Chang 1970) | 0.65625 | 0.94 | 3.02e-01 |
+| `wake-lr-40` | closed wake L/D at Re 40, default channel (theory: 2.236 in open water, Gautier et al. 2013) | 1.75 | 2.236 | 2.17e-01 |
+| `wake-cd-20` | mean C_D at Re 20, default channel (theory: 2.05 in open water, Dennis & Chang 1970) | 2.39569 | 2.05 | 1.69e-01 |
+| `wake-cd-40` | mean C_D at Re 40, default channel (theory: 1.493 in open water, Gautier et al. 2013) | 1.83695 | 1.4931 | 2.30e-01 |
+| `wake-lr-20-wide` | closed wake L/D at Re 20, channel 32 x 24 D, centre 12 D from the inflow (theory 0.94) | 0.65625 | 0.94 | 3.02e-01 |
+| `wake-lr-40-wide` | closed wake L/D at Re 40, channel 32 x 24 D at t = 100 D/U (theory 2.236) | 1.84375 | 2.236 | 1.75e-01 |
+| `wake-cd-20-wide` | mean C_D at Re 20, channel 32 x 24 D (theory 2.05) | 2.01918 | 2.05 | 1.50e-02 |
+| `wake-cd-40-wide` | mean C_D at Re 40, channel 32 x 24 D (theory 1.493) | 1.54564 | 1.4931 | 3.52e-02 |
+| `wake-st-100` | Strouhal number at Re 100, 8 cells per D, default channel (theory: Roshko 1954 fit 0.212(1 - 21.2/Re)) | 0.174118 | 0.167056 | 4.23e-02 |
+| `wake-st-150` | Strouhal number at Re 150 (theory: the fit extrapolated to 150) | 0.186414 | 0.182037 | 2.40e-02 |
+| `wake-st-200` | Strouhal number at Re 200 (theory: the fit taken past its range of 150) | 0.193721 | 0.189528 | 2.21e-02 |
+| `wake-cd-150` | mean C_D at Re 150, default channel (theory: 1.305 in open water, Qu et al. 2013) | 1.49465 | 1.305 | 1.45e-01 |
+| `wake-cd-200` | mean C_D at Re 200, default channel (theory: 1.316 in open water, Qu et al. 2013) | 1.47279 | 1.316 | 1.19e-01 |
+| `wake-cd-100-wide` | mean C_D at Re 100, channel 32 x 24 D, centre 12 D from the inflow (theory: open water, Qu et al. 2013) | 1.34495 | 1.317 | 2.12e-02 |
+| `wake-st-100-wide` | Strouhal number at Re 100, channel 32 x 24 D (theory: open water, Qu et al. 2013) | 0.158795 | 0.1649 | 3.70e-02 |
+| `wake-clamp-100-wide` | C_L amplitude at Re 100, channel 32 x 24 D (no theory column: see page 5 for the literature range) | 0.228218 | 0 | 2.28e-01 |
+| `wake-cd-150-wide` | mean C_D at Re 150, channel 32 x 24 D, centre 12 D from the inflow (theory: open water, Qu et al. 2013) | 1.31965 | 1.305 | 1.12e-02 |
+| `wake-st-150-wide` | Strouhal number at Re 150, channel 32 x 24 D (theory: open water, Qu et al. 2013) | 0.172597 | 0.1841 | 6.25e-02 |
+| `wake-clamp-150-wide` | C_L amplitude at Re 150, channel 32 x 24 D (no theory column: see page 5 for the literature range) | 0.324298 | 0 | 3.24e-01 |
+| `wake-cd-200-wide` | mean C_D at Re 200, channel 32 x 24 D, centre 12 D from the inflow (theory: open water, Qu et al. 2013) | 1.31022 | 1.316 | 4.39e-03 |
+| `wake-st-200-wide` | Strouhal number at Re 200, channel 32 x 24 D (theory: open water, Qu et al. 2013) | 0.180717 | 0.1958 | 7.70e-02 |
+| `wake-clamp-200-wide` | C_L amplitude at Re 200, channel 32 x 24 D (no theory column: see page 5 for the literature range) | 0.387789 | 0 | 3.88e-01 |
+| `wake-clamp-100` | C_L amplitude at Re 100, default channel, 8 cells per D | 0.259978 | 0 | 2.60e-01 |
+| `wake-st-n6` | St at Re 100, 6 cells per D (the grid of make test) | 0.167776 | 0.167056 | 4.31e-03 |
+| `wake-st-n12` | St at Re 100, 12 cells per D | 0.178596 | 0.167056 | 6.91e-02 |
+| `wake-st-n16` | St at Re 100, 16 cells per D | 0.180988 | 0.167056 | 8.34e-02 |
+| `wake-cd-n6` | C_D at Re 100, 6 cells per D, default channel (theory: open water) | 1.586 | 1.317 | 2.04e-01 |
+| `wake-cd-n12` | C_D at Re 100, 12 cells per D | 1.54868 | 1.317 | 1.76e-01 |
+| `wake-cd-n16` | C_D at Re 100, 16 cells per D | 1.53446 | 1.317 | 1.65e-01 |
+| `wake-clamp-n16` | C_L amplitude at Re 100, 16 cells per D, default channel | 0.321138 | 0 | 3.21e-01 |
+| `wake-st-dt2` | St at Re 100, 8 cells per D, half the time step, over St at the full step (theory 1) | 1.01829 | 1 | 1.83e-02 |
+| `wake-cd-dt2` | C_D at Re 100, half the time step, over C_D at the full step (theory 1) | 0.994707 | 1 | 5.29e-03 |
+| `wake-cd-shift` | C_D at Re 100 with the wall moved half a cell inwards over C_D with the wall at the radius (no theory: sensitivity) | 1.03503 | 1 | 3.50e-02 |
+| `wake-st-shift` | St at Re 100 with the wall moved half a cell inwards over St with the wall at the radius | 1.0434 | 1 | 4.34e-02 |
+| `wake-st-h16` | St at Re 100 in a channel 16 D high (blockage 1/16), centre 4 D from the inflow | 0.169337 | 0.167056 | 1.37e-02 |
+| `wake-st-h24` | St at Re 100 in a channel 24 D high (blockage 1/24), centre 4 D from the inflow | 0.169078 | 0.167056 | 1.21e-02 |
+| `wake-cd-h16` | C_D at Re 100, blockage 1/16, centre 4 D from the inflow | 1.49399 | 1.317 | 1.34e-01 |
+| `wake-cd-h24` | C_D at Re 100, blockage 1/24, centre 4 D from the inflow | 1.49193 | 1.317 | 1.33e-01 |
+| `wake-cd-up8` | C_D at Re 100, channel 24 x 8 D, centre 8 D from the inflow | 1.49181 | 1.317 | 1.33e-01 |
+| `wake-st-up8` | St at Re 100, channel 24 x 8 D, centre 8 D from the inflow | 0.171631 | 0.1649 | 4.08e-02 |
+| `wake-cd-mid` | C_D at Re 100, channel 24 x 16 D, centre 8 D from the inflow | 1.38505 | 1.317 | 5.17e-02 |
+| `wake-st-mid` | St at Re 100, channel 24 x 16 D, centre 8 D from the inflow | 0.162193 | 0.1649 | 1.64e-02 |
+| `wake-cd-domain` | C_D at Re 100 in the default channel over C_D in the 32 x 24 D channel (theory 1: what the small domain adds) | 1.14714 | 1 | 1.47e-01 |
+| `wake-st-domain` | St at Re 100 in the default channel over St in the 32 x 24 D channel (theory 1) | 1.0965 | 1 | 9.65e-02 |

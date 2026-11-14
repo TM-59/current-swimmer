@@ -47,6 +47,7 @@ typedef struct {
     int length, height; /* channel size [D] */
     int upstream;       /* inflow to cylinder centre [D] */
     float wall_shift;   /* moves the middle of the one-cell penalised wall outwards by this many cells */
+    int sharp_wall;     /* 1: binary face mask for the wall-width comparison */
 } WakeSetup;
 
 int wake_init(Wake *w, int cells_per_diameter, float reynolds);

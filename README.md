@@ -14,7 +14,7 @@ Every stroke of its tail pushes water backwards, and that wake pushes back on yo
 Water past a fixed cylinder, in a channel 16 D long and 8 D high (`src/wake.c`, a separate solver;
 the pool, the swimmer and Upstream are unchanged). The step is the Stable Fluids split on a staggered
 grid with MacCormack advection, a pressure solve to $1\times10^{-4}$ U/D and a volume-penalised cylinder;
-the force on the cylinder is the momentum it removes from the water. Below Re ≈ 47 two eddies stay
+the force includes the removed momentum and the pressure impulse on the obstacle. Below Re ≈ 47 two eddies stay
 attached; above, they leave in turn and the lift swings.
 
 ![Re 150 after 100 D/U: the vortex street behind the cylinder](docs/karman.svg)
@@ -25,15 +25,15 @@ Measured at Re 100–200 on 8 cells per diameter (`make theory-figs`; the CI che
 
 | Re | St measured | St, Roshko 1954 fit | difference | mean C_D measured | C_D, open water (literature) |
 |---|---|---|---|---|---|
-| 100 | 0.174 | 0.167 | +4.3 % | 1.68 | about 1.33 |
-| 150 | 0.186 | 0.182 | +2.2 % | 1.65 | about 1.33 |
-| 200 | 0.193 | 0.190 | +1.8 % | 1.63 | about 1.33 |
+| 100 | 0.174 | 0.167 | +4.2 % | 1.543 | about 1.33 |
+| 150 | 0.186 | 0.182 | +2.4 % | 1.495 | about 1.33 |
+| 200 | 0.194 | 0.190 | +2.2 % | 1.473 | about 1.33 |
 
-Refinement at Re 100: St 0.169 / 0.174 / 0.178 / 0.180 on 6 / 8 / 12 / 16 cells per D; halving the
-time step changes St by +1.7 % and C_D by −3.6 %; a channel 24 D high (blockage 1/24 instead of 1/8)
-gives St 0.169 and C_D 1.62. The Strouhal number lies inside the band 0.16–0.22 on every grid. The drag
-stays 24–28 % above the open-water value on every grid; blockage and the step explain about 4 % each and
-the rest is not isolated (theory page 5, S26).
+Refinement at Re 100: St 0.168 / 0.174 / 0.179 / 0.181 on 6 / 8 / 12 / 16 cells per D; halving the
+time step changes St by +1.8 % and C_D by −0.5 %. The original split reads C_D 1.683 instead of 1.543;
+in a 32 × 24 D channel it falls to 1.345. The open-water drag value is provisional: the original source
+was not accessible. Re 150 and 200 are outside the fit's stated range, 50 < Re < 150
+(theory page 5, S26).
 
 ```bash
 make karman   # docs/karman.svg and docs/karman-forces.svg (about 20 s)
@@ -44,7 +44,7 @@ make play     # then open http://localhost:4204/wake.html
 |---|---|
 | ![The wake page at Re 150: vorticity, forces and St against the literature band](docs/images/wake-150.jpg) | ![The wake page at Re 30](docs/images/wake-30.jpg) |
 
-<sub>円柱の後ろのカルマン渦列。Re 100・150・200 のストローハル数は 0.16〜0.22 の帯に入り、文献の近似式との差は 1.8〜4.3 %。抗力係数は格子を細かくしても開いた水の値より 24〜28 % 大きく、原因はまだ特定していない(手引き 5 頁)。</sub>
+<sub>円柱の後ろのカルマン渦列。既定の水路では Re 100・150・200 のストローハル数は 0.16〜0.22。抗力は投影方法と水路寸法に依存し、開水域の文献値は原典未確認(手引き 5 頁)。</sub>
 
 ## M5: Upstream, a story in five reaches
 

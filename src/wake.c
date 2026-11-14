@@ -268,9 +268,10 @@ static void project(Wake *w, int aware, double *ix, double *iy)
 
 /* Solid fraction of a face at distance d from the centre: 1 deep inside, 0 outside, linear over one cell
  * centred on the radius plus `shift` cells. */
-static float solid(const Wake *w, float shift, float x, float y)
+static float solid(const Wake *w, float shift, int sharp, float x, float y)
 {
     float d = sqrtf((x - w->cx) * (x - w->cx) + (y - w->cy) * (y - w->cy));
+    if (sharp) return d <= w->r + shift * w->h ? 1.0f : 0.0f;
     return clampf((w->r - d) / w->h + 0.5f + shift, 0.0f, 1.0f);
 }
 
@@ -281,7 +282,7 @@ int wake_init(Wake *w, int cells_per_diameter, float reynolds)
 
 int wake_init_channel(Wake *w, int cells_per_diameter, float reynolds, int height)
 {
-    WakeSetup setup = {cells_per_diameter, reynolds, WAKE_LX, height, WAKE_CX, 0.0f};
+    WakeSetup setup = {cells_per_diameter, reynolds, WAKE_LX, height, WAKE_CX, 0.0f, 0};
     return wake_init_setup(w, &setup);
 }
 
@@ -313,7 +314,7 @@ int wake_init_setup(Wake *w, const WakeSetup *setup)
     for (int j = -1; j <= w->ny; j++)
         for (int i = 0; i <= w->nx; i++) {
             size_t k = U_(w, i, j);
-            w->chiu[k] = solid(w, setup->wall_shift, (float)i * h, ((float)j + 0.5f) * h);
+            w->chiu[k] = solid(w, setup->wall_shift, setup->sharp_wall, (float)i * h, ((float)j + 0.5f) * h);
             w->u[k] = INFLOW * (1.0f - w->chiu[k]);
         }
     /* The nudge: a weak cross-flow blob behind the cylinder. Without it a mirror-symmetric start would
@@ -322,7 +323,7 @@ int wake_init_setup(Wake *w, const WakeSetup *setup)
         for (int i = -1; i <= w->nx; i++) {
             size_t k = V_(w, i, j);
             float x = ((float)i + 0.5f) * h - (w->cx + 1.5f), y = (float)j * h - w->cy;
-            w->chiv[k] = solid(w, setup->wall_shift, ((float)i + 0.5f) * h, (float)j * h);
+            w->chiv[k] = solid(w, setup->wall_shift, setup->sharp_wall, ((float)i + 0.5f) * h, (float)j * h);
             w->v[k] = 0.3f * expf(-(x * x + y * y) / 0.5f) * (1.0f - w->chiv[k]);
         }
     bc_u(w, w->u);

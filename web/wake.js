@@ -99,7 +99,7 @@
     if (!mark.hidden) mark.style.left = pos(s.st);
     const band = shedding && s.st >= 0.16 && s.st <= 0.22;
     $('wk-compare').textContent = !measuring ? 'Measuring starts after 20 D/U, over the newest half of the record.'
-      : shedding ? `St ${s.st.toFixed(3)} over ${s.periods.toFixed(0)} lift periods: ${band ? 'inside' : 'outside'} the band 0.16–0.22; ${((s.st / roshko(s.re) - 1) * 100).toFixed(0)} % from Roshko's fit. Mean drag ${s.cdMean.toFixed(2)} against about 1.33 for a post in open water; this model reads 24–28 % high on every grid tried (see Limits).`
+      : shedding ? `St ${s.st.toFixed(3)} over ${s.periods.toFixed(0)} lift periods: ${band ? 'inside' : 'outside'} the band 0.16–0.22; ${((s.st / roshko(s.re) - 1) * 100).toFixed(0)} % from Roshko's fit. Mean drag ${s.cdMean.toFixed(2)}; the domain and projection affect this value (see Limits).`
       : s.re < 47 ? `No swing: below Re about 47 the two eddies stay attached. Closed wake ${s.lr.toFixed(2)} D long.` : 'The swing is still growing; shedding starts slowly near Re 50.';
   }
 

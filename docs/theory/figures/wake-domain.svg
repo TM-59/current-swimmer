@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" width="720" height="400" font-family="sans-serif" font-size="12">
+<rect width="720" height="400" fill="#ffffff"/>
+<text x="70" y="26" font-size="16" font-weight="bold" fill="#222">Re 100 in larger domains: 1 = 16x8 D (inflow 4 D), 2 = 24x8 (8 D), 3 = 24x16 (8 D), 4 = 32x24 (12 D)</text>
+<line x1="70.0" y1="44" x2="70.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="344.0" x2="700" y2="344.0" stroke="#e3e3e3"/>
+<text x="70.0" y="362" text-anchor="middle" fill="#444">1</text>
+<text x="62" y="348.0" text-anchor="end" fill="#444">1.3</text>
+<line x1="196.0" y1="44" x2="196.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="284.0" x2="700" y2="284.0" stroke="#e3e3e3"/>
+<text x="196.0" y="362" text-anchor="middle" fill="#444">1.6</text>
+<text x="62" y="288.0" text-anchor="end" fill="#444">1.39</text>
+<line x1="322.0" y1="44" x2="322.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="224.0" x2="700" y2="224.0" stroke="#e3e3e3"/>
+<text x="322.0" y="362" text-anchor="middle" fill="#444">2.2</text>
+<text x="62" y="228.0" text-anchor="end" fill="#444">1.48</text>
+<line x1="448.0" y1="44" x2="448.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="164.0" x2="700" y2="164.0" stroke="#e3e3e3"/>
+<text x="448.0" y="362" text-anchor="middle" fill="#444">2.8</text>
+<text x="62" y="168.0" text-anchor="end" fill="#444">1.58</text>
+<line x1="574.0" y1="44" x2="574.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="104.0" x2="700" y2="104.0" stroke="#e3e3e3"/>
+<text x="574.0" y="362" text-anchor="middle" fill="#444">3.4</text>
+<text x="62" y="108.0" text-anchor="end" fill="#444">1.67</text>
+<line x1="700.0" y1="44" x2="700.0" y2="344" stroke="#e3e3e3"/>
+<line x1="70" y1="44.0" x2="700" y2="44.0" stroke="#e3e3e3"/>
+<text x="700.0" y="362" text-anchor="middle" fill="#444">4</text>
+<text x="62" y="48.0" text-anchor="end" fill="#444">1.76</text>
+<rect x="70" y="44" width="630" height="300" fill="none" stroke="#888"/>
+<text x="385" y="388" text-anchor="middle" fill="#222">domain</text>
+<text transform="translate(16 194) rotate(-90)" text-anchor="middle" fill="#222">10 x St, C_D</text>
+<polyline fill="none" stroke="#c0392b" stroke-width="2" points="70.0,185.2 280.0,218.0 490.0,286.6 700.0,312.4 "/>
+<rect x="78" y="52" width="12" height="12" fill="#c0392b"/><text x="96" y="63" fill="#222">mean C_D</text>
+<polyline fill="none" stroke="#888888" stroke-width="2" points="70.0,330.4 280.0,330.4 490.0,330.4 700.0,330.4 "/>
+<rect x="228" y="52" width="12" height="12" fill="#888888"/><text x="246" y="63" fill="#222">C_D open water, Qu et al. 2013</text>
+<polyline fill="none" stroke="#2471a3" stroke-width="2" points="70.0,57.6 280.0,73.6 490.0,134.3 700.0,156.2 "/>
+<rect x="378" y="52" width="12" height="12" fill="#2471a3"/><text x="396" y="63" fill="#222">10 x St</text>
+<polyline fill="none" stroke="#27ae60" stroke-width="2" points="70.0,116.9 280.0,116.9 490.0,116.9 700.0,116.9 "/>
+<rect x="528" y="52" width="12" height="12" fill="#27ae60"/><text x="546" y="63" fill="#222">10 x St open water, Qu et al. 2013</text>
+</svg>

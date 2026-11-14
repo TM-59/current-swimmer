@@ -89,9 +89,29 @@ static void test_solid_aware_projection(void)
     check(mean[1] > 1.03 * mean[0], "the M2 split reads the drag more than 3 % higher");
 }
 
+static void test_sharp_wall(void)
+{
+    WakeSetup setup = {CELLS, 100.0f, WAKE_LX, WAKE_LY, WAKE_CX, 0.0f, 0};
+    int fractional[2] = {0, 0};
+    for (int sharp = 0; sharp < 2; sharp++) {
+        Wake w;
+        setup.sharp_wall = sharp;
+        if (wake_init_setup(&w, &setup)) { check(0, "wake_init_setup"); return; }
+        size_t count = (size_t)(w.nx + 1) * (size_t)(w.ny + 2);
+        for (size_t i = 0; i < count; i++)
+            if (w.chiu[i] > 0.0f && w.chiu[i] < 1.0f) fractional[sharp]++;
+        float dt = wake_dt(&w);
+        for (int i = 0; i < 10; i++) wake_step(&w, dt);
+        check(wake_max_divergence(&w) < 1e-4f, sharp ? "sharp-wall projection converges" : "blurred-wall projection converges");
+        wake_free(&w);
+    }
+    check(fractional[0] > 0 && fractional[1] == 0, "sharp-wall option replaces fractional faces with a binary mask");
+}
+
 /* Below Re about 47 the wake stays steady: two attached eddies, no lift oscillation, drag above the
  * shedding values. Open water (2D): C_D 2.05 and L/D 0.94 at Re 20 (Dennis & Chang 1970), C_D 1.493 and
- * L/D 2.236 at Re 40 (Gautier et al. 2013). The small channel adds drag (docs/theory/05-wake.md, S26). */
+ * L/D 2.236 at Re 40 (Gautier et al. 2013); these literature values have not been checked against the
+ * original papers. The small channel adds drag (docs/theory/05-wake.md, S26). */
 static void test_steady_twin_vortex(void)
 {
     WakeStats s;
@@ -119,7 +139,12 @@ static void test_shedding(void)
         int steps = (int)(T_END / dt + 0.5f);
         float *cl = malloc((size_t)steps * sizeof(float)), *cd = malloc((size_t)steps * sizeof(float));
         float *box = malloc((size_t)steps * sizeof(float));
-        if (!cl || !cd || !box) { check(0, "malloc"); return; }
+        if (!cl || !cd || !box) {
+            check(0, "malloc");
+            free(cl); free(cd); free(box);
+            wake_free(&w);
+            return;
+        }
         for (int i = 0; i < steps; i++) {
             wake_step(&w, dt);
             cl[i] = wake_lift_coefficient(&w);
@@ -153,6 +178,7 @@ int main(void)
     test_stats_on_a_sine();
     test_projection_and_mass();
     test_solid_aware_projection();
+    test_sharp_wall();
     test_steady_twin_vortex();
     test_shedding();
     if (failures) {

@@ -1,35 +1,35 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" width="720" height="400" font-family="sans-serif" font-size="12">
 <rect width="720" height="400" fill="#ffffff"/>
-<text x="70" y="26" font-size="16" font-weight="bold" fill="#222">Re 100 on finer grids (blockage 1/8, step 0.4 cell per U)</text>
+<text x="70" y="26" font-size="16" font-weight="bold" fill="#222">Re 100 on finer grids (default channel, step 0.4 cell per U)</text>
 <line x1="70.0" y1="44" x2="70.0" y2="344" stroke="#e3e3e3"/>
 <line x1="70" y1="344.0" x2="700" y2="344.0" stroke="#e3e3e3"/>
 <text x="70.0" y="362" text-anchor="middle" fill="#444">6</text>
-<text x="62" y="348.0" text-anchor="end" fill="#444">1.64</text>
+<text x="62" y="348.0" text-anchor="end" fill="#444">1.52</text>
 <line x1="196.0" y1="44" x2="196.0" y2="344" stroke="#e3e3e3"/>
 <line x1="70" y1="284.0" x2="700" y2="284.0" stroke="#e3e3e3"/>
 <text x="196.0" y="362" text-anchor="middle" fill="#444">8</text>
-<text x="62" y="288.0" text-anchor="end" fill="#444">1.68</text>
+<text x="62" y="288.0" text-anchor="end" fill="#444">1.58</text>
 <line x1="322.0" y1="44" x2="322.0" y2="344" stroke="#e3e3e3"/>
 <line x1="70" y1="224.0" x2="700" y2="224.0" stroke="#e3e3e3"/>
 <text x="322.0" y="362" text-anchor="middle" fill="#444">10</text>
-<text x="62" y="228.0" text-anchor="end" fill="#444">1.71</text>
+<text x="62" y="228.0" text-anchor="end" fill="#444">1.64</text>
 <line x1="448.0" y1="44" x2="448.0" y2="344" stroke="#e3e3e3"/>
 <line x1="70" y1="164.0" x2="700" y2="164.0" stroke="#e3e3e3"/>
 <text x="448.0" y="362" text-anchor="middle" fill="#444">12</text>
-<text x="62" y="168.0" text-anchor="end" fill="#444">1.74</text>
+<text x="62" y="168.0" text-anchor="end" fill="#444">1.7</text>
 <line x1="574.0" y1="44" x2="574.0" y2="344" stroke="#e3e3e3"/>
 <line x1="70" y1="104.0" x2="700" y2="104.0" stroke="#e3e3e3"/>
 <text x="574.0" y="362" text-anchor="middle" fill="#444">14</text>
-<text x="62" y="108.0" text-anchor="end" fill="#444">1.78</text>
+<text x="62" y="108.0" text-anchor="end" fill="#444">1.76</text>
 <line x1="700.0" y1="44" x2="700.0" y2="344" stroke="#e3e3e3"/>
 <line x1="70" y1="44.0" x2="700" y2="44.0" stroke="#e3e3e3"/>
 <text x="700.0" y="362" text-anchor="middle" fill="#444">16</text>
-<text x="62" y="48.0" text-anchor="end" fill="#444">1.81</text>
+<text x="62" y="48.0" text-anchor="end" fill="#444">1.82</text>
 <rect x="70" y="44" width="630" height="300" fill="none" stroke="#888"/>
 <text x="385" y="388" text-anchor="middle" fill="#222">cells per diameter</text>
 <text transform="translate(16 194) rotate(-90)" text-anchor="middle" fill="#222">10 x St, C_D</text>
-<polyline fill="none" stroke="#2471a3" stroke-width="2" points="70.0,264.5 196.0,164.7 448.0,102.1 700.0,57.6 "/>
+<polyline fill="none" stroke="#2471a3" stroke-width="2" points="70.0,188.5 196.0,125.7 448.0,81.3 700.0,57.6 "/>
 <rect x="78" y="52" width="12" height="12" fill="#2471a3"/><text x="96" y="63" fill="#222">10 x St</text>
-<polyline fill="none" stroke="#c0392b" stroke-width="2" points="70.0,225.0 196.0,271.0 448.0,274.1 700.0,330.4 "/>
+<polyline fill="none" stroke="#c0392b" stroke-width="2" points="70.0,279.3 196.0,322.1 448.0,316.3 700.0,330.4 "/>
 <rect x="228" y="52" width="12" height="12" fill="#c0392b"/><text x="246" y="63" fill="#222">mean C_D</text>
 </svg>

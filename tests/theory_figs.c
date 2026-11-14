@@ -647,7 +647,7 @@ typedef struct {
 /* The default channel (16 x 8 D, centre 4 D from the inflow) on `cells` per diameter, 100 D/U. */
 static WakeJob wjob(int cells, float re)
 {
-    WakeJob j = {{cells, re, WAKE_LX, WAKE_LY, WAKE_CX, 0.0f}, 0, 0, 100.0f, 1.0f, NULL, NULL};
+    WakeJob j = {{cells, re, WAKE_LX, WAKE_LY, WAKE_CX, 0.0f, 0}, 0, 0, 100.0f, 1.0f, NULL, NULL};
     return j;
 }
 
@@ -763,7 +763,7 @@ static void wake_run_all(const WakeJob *jobs, WakeOut *outs, int count)
     }
 }
 
-/* Roshko (1954), NACA Report 1191, eq. (2a), 50 < Re < 150: St = 0.212 (1 - 21.2 / Re). Used past 150 only as a guide. */
+/* Roshko (1954), NACA Report 1191, eq. (2a), 50 < Re < 150: St = 0.212 (1 - 21.2 / Re). Used at 150 and above only as a guide. */
 static float roshko(float re) { return 0.212f * (1.0f - 21.2f / re); }
 /* Williamson (1989), J. Fluid Mech. 206, eq. (6), parallel shedding, data for Re 49..178. */
 static float williamson(float re) { return -3.3265f / re + 0.1816f + 1.6e-4f * re; }
@@ -887,7 +887,7 @@ static void fig_wake(void)
                    {"open water, Qu et al. 2013", yc, "#888888"}};
     plot("wake-drag.svg", "Mean drag coefficient against Re (8 cells per D)", "Re", "C_D", 3, cd, 3);
     value("wake-st-100", "Strouhal number at Re 100, 8 cells per D, default channel (theory: Roshko 1954 fit 0.212(1 - 21.2/Re))", r100->s.strouhal, roshko(100.0f));
-    value("wake-st-150", "Strouhal number at Re 150 (theory: the same fit)", r150->s.strouhal, roshko(150.0f));
+    value("wake-st-150", "Strouhal number at Re 150 (theory: the fit extrapolated to 150)", r150->s.strouhal, roshko(150.0f));
     value("wake-st-200", "Strouhal number at Re 200 (theory: the fit taken past its range of 150)", r200->s.strouhal, roshko(200.0f));
     value("wake-cd-150", "mean C_D at Re 150, default channel (theory: 1.305 in open water, Qu et al. 2013)", r150->s.cd_mean, QU_CD[1]);
     value("wake-cd-200", "mean C_D at Re 200, default channel (theory: 1.316 in open water, Qu et al. 2013)", r200->s.cd_mean, QU_CD[2]);

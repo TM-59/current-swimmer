@@ -88,10 +88,10 @@ flowchart TD
 | S20 | Scenes, choices, effects, endings | [4](04-upstream.md) | mermaid | `src/journey.c#journey_init`, `src/journey.c#journey_free`, `src/journey.c#journey_answer`, `src/journey.c#journey_options`, `src/journey.c#journey_heavy`, `src/journey.c#journey_ending` | `tests/test_story.c#[order]`, `tests/test_story.c#[quiet] reeds` |
 | S21 | Re = UD/ν; the channel and its boundaries | [5](05-wake.md) | `figures/wake-street.svg` | `src/wake.c#wake_init`, `src/wake.c#wake_init_channel`, `src/wake.c#wake_free`, `src/wake.c#bc_u`, `src/wake.c#bc_v` | `tests/test_wake.c#test_projection_and_mass`, `tests/theory_figs.c#wake-mass` |
 | S22 | Staggered grid, MacCormack advection, exact projection | [5](05-wake.md) | `figures/wake-advection.svg`, mermaid | `src/wake.c#wake_step`, `src/wake.c#wake_dt`, `src/wake.c#advect`, `src/wake.c#project`, `src/wake.c#wake_max_divergence`, `src/wake.c#wake_sample` | `tests/test_wake.c#test_projection_and_mass`, `tests/theory_figs.c#wake-div`, `tests/theory_figs.c#wake-first-order-st` |
-| S23 | The penalised cylinder; force = removed momentum | [5](05-wake.md) | `figures/wake-forces.svg` | `src/wake.c#penalize`, `src/wake.c#wake_drag_coefficient`, `src/wake.c#wake_lift_coefficient` | `tests/test_wake.c#test_shedding`, `tests/theory_figs.c#wake-cd-100` |
+| S23 | The penalised cylinder; force and pressure impulse | [5](05-wake.md) | `figures/wake-forces.svg` | `src/wake.c#penalize`, `src/wake.c#wake_drag_coefficient`, `src/wake.c#wake_lift_coefficient`, `src/wake.c#wake_control_volume_drag` | `tests/test_wake.c#test_shedding`, `tests/theory_figs.c#wake-cd-100` |
 | S24 | Steady twin eddies below Re ≈ 47, shedding above | [5](05-wake.md) | `figures/wake-steady.svg`, `figures/wake-regimes.svg` | `src/wake.c#wake_recirculation_length`, `src/wake.c#wake_vorticity_at`, `src/render.c#render_wake_svg` | `tests/test_wake.c#test_steady_twin_vortex`, `tests/theory_figs.c#wake-clamp-40` |
 | S25 | Strouhal number St = fD/U; mean drag | [5](05-wake.md) | `figures/wake-strouhal.svg`, `figures/wake-drag.svg` | `src/wake.c#wake_stats`, `src/wake.c#strouhal_number`, `src/wake.c#wake_run` | `tests/test_wake.c#test_stats_on_a_sine`, `tests/test_wake.c#test_shedding`, `tests/theory_figs.c#wake-st-150` |
-| S26 | Grid, time step and blockage studies | [5](05-wake.md) | `figures/wake-convergence.svg`, `figures/wake-blockage.svg` | `src/wake.c#wake_init_channel`, `src/wake.c#wake_dt` | `tests/theory_figs.c#wake-st-n16`, `tests/theory_figs.c#wake-st-dt2`, `tests/theory_figs.c#wake-st-h24` |
+| S26 | Grid, time step and blockage studies | [5](05-wake.md) | `figures/wake-convergence.svg`, `figures/wake-blockage.svg`, `figures/wake-domain.svg` | `src/wake.c#wake_init_channel`, `src/wake.c#wake_init_setup`, `src/wake.c#wake_dt` | `tests/test_wake.c#test_sharp_wall`, `tests/theory_figs.c#wake-st-n16`, `tests/theory_figs.c#wake-st-dt2`, `tests/theory_figs.c#wake-st-h24` |
 
 Tests named `tests/theory_figs.c#…` are measurements recorded in [figures/values.md](figures/values.md) by `make theory-figs`, not assertions of `make test`. S02, S03, S05, S06, S10, S11, S13 and S19 are covered only that way; turning them into assertions is a follow-up.
 
@@ -101,7 +101,7 @@ What the measurements made visible (none of it is changed here):
 - **The pressure solve is a fixed budget.** After a step, the leftover divergence is about 5 % of the largest vorticity on the game's grid; on a 96 × 96 grid the same 24 sweeps leave 43 % (S08). A net push on the water takes about a second to drain into the walls instead of vanishing at once.
 - **The walls are free-slip** (S02), so no vorticity is shed from them.
 - **The disc is not an obstacle** (S13): the water feels its reaction forces, not its shape. Page 5 (M2) adds a separate solver in which a fixed cylinder is.
-- **The cylinder's drag is 24–28 % above the open-water value on every grid tried** (S26), while its Strouhal number is within 2–4 % of Roshko's fit (S25). Blockage and the time step explain about 4 % each; the rest is not isolated.
+- **The cylinder's drag depends on the projection and domain** (S26). At Re 100 the revised default-channel value is 1.543; the larger domain gives 1.345. The literature drag values are provisional until checked against the originals.
 
 ## Public functions that state no law
 

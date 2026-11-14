@@ -24,8 +24,8 @@
 - `make test` runs `tests/test_wake.c` on 6 cells per diameter for 60 D/U (about 15 s): St in
   0.16..0.22 at Re 100/150/200, mean C_D in 1.3..1.9, no shedding at Re 30. Finer grids, the time
   step and blockage studies belong to `make theory-figs` (page 5 of the handbook), not to CI.
-- The measured drag is 24..28 % above the open-water value on every grid tried; do not tighten the
-  C_D band without first finding that cause (see docs/theory/05-wake.md, S26).
+- The solid-aware projection and domain size affect drag; the current default-channel C_D band is
+  1.42..1.66. Literature drag values are provisional (see docs/theory/05-wake.md, S26).
 - `make karman` writes `docs/karman.svg` and `docs/karman-forces.svg`; the browser page is
   `web/wake.html` (`src/wake_web.c`, 6 cells per D).
 
