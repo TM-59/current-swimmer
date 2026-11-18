@@ -13,21 +13,25 @@ static void range(const float *a, int n, float *lo, float *hi)
 {
     *lo = *hi = a[0];
     for (int i = 1; i < n; i++) {
-        if (a[i] < *lo)
+        if (a[i] < *lo) {
             *lo = a[i];
-        if (a[i] > *hi)
+        }
+        if (a[i] > *hi) {
             *hi = a[i];
+        }
     }
 }
 
 int svg_plot(const char *path, const char *title, const char *xlabel, const char *ylabel,
              const float *x, int count, const Series *series, int nseries)
 {
-    if (count < 2 || nseries < 1)
+    if (count < 2 || nseries < 1) {
         return -1;
+    }
     FILE *fp = fopen(path, "w");
-    if (!fp)
+    if (!fp) {
         return -1;
+    }
 
     float x0, x1, y0, y1;
     range(x, count, &x0, &x1);
@@ -35,13 +39,16 @@ int svg_plot(const char *path, const char *title, const char *xlabel, const char
     for (int s = 1; s < nseries; s++) {
         float lo, hi;
         range(series[s].y, count, &lo, &hi);
-        if (lo < y0)
+        if (lo < y0) {
             y0 = lo;
-        if (hi > y1)
+        }
+        if (hi > y1) {
             y1 = hi;
+        }
     }
-    if (x1 <= x0)
+    if (x1 <= x0) {
         x1 = x0 + 1.0f;
+    }
     if (y1 <= y0) {
         y0 -= 0.5f;
         y1 += 0.5f;
@@ -86,9 +93,10 @@ int svg_plot(const char *path, const char *title, const char *xlabel, const char
     for (int s = 0; s < nseries; s++) {
         fprintf(fp, "<polyline fill=\"none\" stroke=\"%s\" stroke-width=\"2\" points=\"",
                 series[s].color);
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < count; i++) {
             fprintf(fp, "%.1f,%.1f ", ML + (x[i] - x0) / (x1 - x0) * pw,
                     MT + ph - (series[s].y[i] - y0) / (y1 - y0) * ph);
+        }
         fprintf(fp, "\"/>\n");
         fprintf(fp,
                 "<rect x=\"%d\" y=\"%d\" width=\"12\" height=\"12\" fill=\"%s\"/><text x=\"%d\" "

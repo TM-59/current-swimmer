@@ -25,8 +25,9 @@ static inline void run_journey(uint64_t key, unsigned effects, int route, int st
     Policy p;
     memset(out, 0, sizeof *out);
     out->ending = -1;
-    if (journey_init(&j, effects))
+    if (journey_init(&j, effects)) {
         return;
+    }
     policy_init(&p, key);
     int steps = 0;
     while (j.reach < J_REACHES && steps < RUN_GUARD_STEPS) {

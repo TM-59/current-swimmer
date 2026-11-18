@@ -30,8 +30,9 @@ Gif *gif_open(const char *path, int width, int height, unsigned char palette[GIF
               int delay_cs)
 {
     Gif *g = calloc(1, sizeof *g);
-    if (!g)
+    if (!g) {
         return NULL;
+    }
     g->f = fopen(path, "wb");
     if (!g->f) {
         free(g);
@@ -46,8 +47,9 @@ Gif *gif_open(const char *path, int width, int height, unsigned char palette[GIF
     fputc(0xB3, g->f); /* global table, 16 colours */
     fputc(0, g->f);
     fputc(0, g->f);
-    for (int i = 0; i < GIF_COLOURS; i++)
+    for (int i = 0; i < GIF_COLOURS; i++) {
         fwrite(palette[i], 1, 3, g->f);
+    }
     fwrite("\x21\xFF\x0BNETSCAPE2.0\x03\x01\x00\x00\x00", 1, 19, g->f);
     return g;
 }
@@ -75,15 +77,17 @@ static void put_code(Gif *g, int code, int size)
 
 static void reset_table(Gif *g)
 {
-    for (int i = 0; i < HASH; i++)
+    for (int i = 0; i < HASH; i++) {
         g->hkey[i] = -1;
+    }
 }
 
 static int *lookup(Gif *g, int key)
 {
     int slot = (int)(((unsigned)key * 2654435761u) % HASH);
-    while (g->hkey[slot] != -1 && g->hkey[slot] != key)
+    while (g->hkey[slot] != -1 && g->hkey[slot] != key) {
         slot = (slot + 1) % HASH;
+    }
     g->hkey[slot] = key;
     return &g->hval[slot];
 }
@@ -92,8 +96,9 @@ static int find(Gif *g, int key)
 {
     int slot = (int)(((unsigned)key * 2654435761u) % HASH);
     while (g->hkey[slot] != -1) {
-        if (g->hkey[slot] == key)
+        if (g->hkey[slot] == key) {
             return g->hval[slot];
+        }
         slot = (slot + 1) % HASH;
     }
     return -1;
@@ -141,11 +146,13 @@ int gif_frame(Gif *g, const unsigned char *pixels, int hold_cs)
     }
     put_code(g, prefix, size);
     /* the decoder adds one more entry after the last code, which may widen the next code */
-    if (++next > (1 << size) && size < 12)
+    if (++next > (1 << size) && size < 12) {
         size++;
+    }
     put_code(g, EOI, size);
-    if (g->nbits > 0)
+    if (g->nbits > 0) {
         emit_byte(g, (int)(g->acc & 255));
+    }
     if (g->blen > 0) {
         fputc(g->blen, g->f);
         fwrite(g->block, 1, (size_t)g->blen, g->f);
@@ -158,8 +165,9 @@ int gif_close(Gif *g)
 {
     fputc(0x3B, g->f);
     int bad = ferror(g->f) != 0;
-    if (fclose(g->f))
+    if (fclose(g->f)) {
         bad = 1;
+    }
     free(g);
     return bad;
 }
@@ -208,16 +216,19 @@ void gif_text_size(const char *text, int scale, int *width, int *height)
     for (const char *p = text; *p; p++) {
         if (*p == '\n') {
             rows++;
-            if (cur > cols)
+            if (cur > cols) {
                 cols = cur;
+            }
             cur = 0;
-        } else
+        } else {
             cur++;
+        }
     }
     if (cur > 0) {
         rows++;
-        if (cur > cols)
+        if (cur > cols) {
             cols = cur;
+        }
     }
     *width = cols * 6 * scale;
     *height = rows * 9 * scale;
@@ -225,10 +236,13 @@ void gif_text_size(const char *text, int scale, int *width, int *height)
 
 static void fill(unsigned char *px, int w, int h, int x0, int y0, int x1, int y1, int colour)
 {
-    for (int y = y0; y < y1 && y < h; y++)
-        for (int x = x0; x < x1 && x < w; x++)
-            if (x >= 0 && y >= 0)
+    for (int y = y0; y < y1 && y < h; y++) {
+        for (int x = x0; x < x1 && x < w; x++) {
+            if (x >= 0 && y >= 0) {
                 px[y * w + x] = (unsigned char)colour;
+            }
+        }
+    }
 }
 
 static void draw_cell(unsigned char *px, int w, int h, int cx, int cy, int s, char ch, int colour)
@@ -260,11 +274,14 @@ static void draw_cell(unsigned char *px, int w, int h, int cx, int cy, int s, ch
         fill(px, w, h, x0 + 2 * s, y0 + 3 * s, x0 + 4 * s, y0 + 5 * s, colour);
         return;
     }
-    for (int r = 0; r < 7; r++)
-        for (int b = 0; b < 5; b++)
-            if (rows[r] & (16 >> b))
+    for (int r = 0; r < 7; r++) {
+        for (int b = 0; b < 5; b++) {
+            if (rows[r] & (16 >> b)) {
                 fill(px, w, h, x0 + b * s, y0 + (r + 1) * s, x0 + (b + 1) * s, y0 + (r + 2) * s,
                      colour);
+            }
+        }
+    }
 }
 
 void gif_draw_text(unsigned char *pixels, int width, int height, const char *text, int scale,

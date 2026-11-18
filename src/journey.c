@@ -70,8 +70,9 @@ static int in_reeds(const Journey *j)
 
 float journey_hold_need(const Journey *j)
 {
-    if (j->reach >= J_REACHES)
+    if (j->reach >= J_REACHES) {
         return 0.0f;
+    }
     return at_weir(j) ? WEIR_HOLD : in_reeds(j) ? STAY_HOLD : 0.0f;
 }
 
@@ -80,8 +81,9 @@ float journey_hold_radius(void) { return HOLD_RADIUS; }
 static void open_scene(Journey *j, int scene)
 {
     j->scene = scene;
-    if (j->order_len < JS_COUNT)
+    if (j->order_len < JS_COUNT) {
         j->order[j->order_len++] = scene;
+    }
     if (journey_heavy(scene)) {
         j->banner = JB_NONE;
         j->banner_left = 0.0f;
@@ -92,8 +94,9 @@ static void raise_banner(Journey *j, int banner)
 {
     j->banner = banner;
     j->banner_left = 1.5f;
-    if (banner == JB_CLEAR)
+    if (banner == JB_CLEAR) {
         j->loud++;
+    }
 }
 
 static void set_marks(Journey *j)
@@ -126,20 +129,24 @@ static void set_marks(Journey *j)
 static float drain_rate(const Journey *j)
 {
     float d = DRAIN;
-    if (j->silt && on(j, JE_PACE))
+    if (j->silt && on(j, JE_PACE)) {
         d *= PACE_DRAIN;
-    if (j->reach == 1 && j->route == 1 && on(j, JE_ROUTE))
+    }
+    if (j->reach == 1 && j->route == 1 && on(j, JE_ROUTE)) {
         d *= DITCH_DRAIN;
+    }
     return d;
 }
 
 static float regen_rate(const Journey *j)
 {
     float r = REGEN;
-    if (j->reach == 3 && on(j, JE_WARM))
+    if (j->reach == 3 && on(j, JE_WARM)) {
         r *= WARM_REGEN;
-    if (j->reach == 4 && j->stay == 0 && on(j, JE_STAY))
+    }
+    if (j->reach == 4 && j->stay == 0 && on(j, JE_STAY)) {
         r *= STAY_REGEN;
+    }
     return r;
 }
 
@@ -157,12 +164,13 @@ static void spin_up(Journey *j)
         float u[CELLS], v[CELLS];
     } cache[8];
     static int cached;
-    for (int i = 0; i < cached; i++)
+    for (int i = 0; i < cached; i++) {
         if (cache[i].flow == j->flow) {
             memcpy(j->water.u, cache[i].u, sizeof cache[i].u);
             memcpy(j->water.v, cache[i].v, sizeof cache[i].v);
             return;
         }
+    }
     for (int k = 0; k < SPIN_UP_STEPS; k++) {
         sluice(j);
         fluid_step(&j->water, J_DT);
@@ -182,14 +190,18 @@ static void start_reach(Journey *j)
     }
     swimmer_init(&j->fish, START_X, START_Y, 0.0f);
     j->flow = BASE_FLOW[j->reach];
-    if (j->reach == 1 && j->route == 0 && on(j, JE_ROUTE))
+    if (j->reach == 1 && j->route == 0 && on(j, JE_ROUTE)) {
         j->flow *= PIPE_FLOW;
-    if (j->reach == 1 && j->route == 1 && on(j, JE_ROUTE))
+    }
+    if (j->reach == 1 && j->route == 1 && on(j, JE_ROUTE)) {
         j->flow *= DITCH_FLOW;
-    if (j->reach != 2 && j->reach != 3)
+    }
+    if (j->reach != 2 && j->reach != 3) {
         j->stamina_max = 1.0f; /* the eddy's reserve lasts through the warm water */
-    if (j->stamina > j->stamina_max)
+    }
+    if (j->stamina > j->stamina_max) {
         j->stamina = j->stamina_max;
+    }
     j->reach_time = 0.0f;
     j->held = 0.0f;
     j->best_x = START_X;
@@ -204,8 +216,9 @@ int journey_init(Journey *j, unsigned effects)
     j->route = j->stay = -1;
     j->silt = 1;
     j->stamina = j->stamina_max = 1.0f;
-    if (fluid_init(&j->water, J_GRID, J_VISC))
+    if (fluid_init(&j->water, J_GRID, J_VISC)) {
         return 1;
+    }
     swimmer_init(&j->fish, START_X, START_Y, 0.0f);
     j->scene = JS_NONE;
     open_scene(j, JS_OUTLET);
@@ -220,17 +233,20 @@ static void clear_reach(Journey *j)
     int scene = next[j->reach];
     j->reach++;
     /* The heavy scenes and the ending get the screen to themselves: no cleared banner. */
-    if (!journey_heavy(scene) && scene != JS_SPRING)
+    if (!journey_heavy(scene) && scene != JS_SPRING) {
         raise_banner(j, JB_CLEAR);
+    }
     open_scene(j, scene);
 }
 
 void journey_step(Journey *j, float turn, int stroke)
 {
-    if (j->scene != JS_NONE || j->reach >= J_REACHES || !j->water.u)
+    if (j->scene != JS_NONE || j->reach >= J_REACHES || !j->water.u) {
         return;
-    if (!isfinite(turn))
+    }
+    if (!isfinite(turn)) {
         turn = 0.0f;
+    }
     int r = j->reach;
     int beat = stroke && !j->winded && j->stamina > 0.0f;
     if (beat) {
@@ -241,8 +257,9 @@ void journey_step(Journey *j, float turn, int stroke)
         }
     } else {
         j->stamina = fminf(j->stamina_max, j->stamina + regen_rate(j) * J_DT);
-        if (j->winded && j->stamina >= 0.35f * j->stamina_max)
+        if (j->winded && j->stamina >= 0.35f * j->stamina_max) {
             j->winded = 0;
+        }
     }
     Controls c = {fmaxf(-1.0f, fminf(1.0f, turn)), beat};
     sluice(j);
@@ -250,19 +267,24 @@ void journey_step(Journey *j, float turn, int stroke)
     fluid_step(&j->water, J_DT);
     j->time += J_DT;
     j->reach_time += J_DT;
-    if (j->stamina < 0.2f * j->stamina_max)
+    if (j->stamina < 0.2f * j->stamina_max) {
         j->strain += J_DT;
-    if (j->stamina < 0.12f * j->stamina_max)
+    }
+    if (j->stamina < 0.12f * j->stamina_max) {
         j->crisis_reach[r] = 1;
-    if (j->banner_left > 0.0f && (j->banner_left -= J_DT) <= 0.0f)
+    }
+    if (j->banner_left > 0.0f && (j->banner_left -= J_DT) <= 0.0f) {
         j->banner = JB_NONE;
-    if (j->fish.x > j->best_x)
+    }
+    if (j->fish.x > j->best_x) {
         j->best_x = j->fish.x;
+    }
 
     /* Swept back: the current took more than SWEEP_LOSS of the ground won. The pond keeps emptying.
      * Holding at the weir or in the reeds is not ground lost: the ring is the measure there. */
-    if (journey_hold_need(j) > 0.0f)
+    if (journey_hold_need(j) > 0.0f) {
         j->best_x = j->fish.x;
+    }
     if (j->best_x - j->fish.x > SWEEP_LOSS) {
         j->sweeps++;
         j->sweeps_reach[r]++;
@@ -294,20 +316,23 @@ void journey_step(Journey *j, float turn, int stroke)
          * while Copperfin holds close. */
         if (d2 <= HOLD_RADIUS * HOLD_RADIUS && (j->held += J_DT) >= need) {
             j->held = 0.0f;
-            if (++j->mark >= j->marks)
+            if (++j->mark >= j->marks) {
                 clear_reach(j);
+            }
         }
         return;
     }
-    if (d2 <= MARK_RADIUS * MARK_RADIUS && ++j->mark >= j->marks)
+    if (d2 <= MARK_RADIUS * MARK_RADIUS && ++j->mark >= j->marks) {
         clear_reach(j);
+    }
 }
 
 int journey_answer(Journey *j, int option)
 {
     int scene = j->scene;
-    if (scene == JS_NONE || option < 0 || option >= journey_options(scene))
+    if (scene == JS_NONE || option < 0 || option >= journey_options(scene)) {
         return 1;
+    }
     j->scene = JS_NONE;
     switch (scene) {
     case JS_OUTLET:
@@ -332,15 +357,18 @@ int journey_answer(Journey *j, int option)
         break;
     case JS_REEDS:
         j->stay = option;
-        if (on(j, JE_PARTING))
+        if (on(j, JE_PARTING)) {
             j->silt = 0;
-        if (option == 0 && on(j, JE_STAY))
+        }
+        if (option == 0 && on(j, JE_STAY)) {
             j->stamina = j->stamina_max;
+        }
         start_reach(j);
         break;
     case JS_SURGE:
-        if (on(j, JE_SURGE))
+        if (on(j, JE_SURGE)) {
             j->flow *= j->stay == 1 && on(j, JE_STAY) ? GO_SURGE : SURGE_FLOW;
+        }
         break;
     case JS_SPRING:
         break;

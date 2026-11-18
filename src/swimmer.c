@@ -51,23 +51,27 @@ void swimmer_step(Swimmer *s, Fluid *f, const Controls *c, float dt)
     float lo = s->radius, hi = 1.0f - s->radius;
     if (s->x < lo) {
         s->x = lo;
-        if (s->vx < 0)
+        if (s->vx < 0) {
             s->vx = 0;
+        }
     }
     if (s->x > hi) {
         s->x = hi;
-        if (s->vx > 0)
+        if (s->vx > 0) {
             s->vx = 0;
+        }
     }
     if (s->y < lo) {
         s->y = lo;
-        if (s->vy < 0)
+        if (s->vy < 0) {
             s->vy = 0;
+        }
     }
     if (s->y > hi) {
         s->y = hi;
-        if (s->vy > 0)
+        if (s->vy > 0) {
             s->vy = 0;
+        }
     }
 
     /* Newton's third law: the tail jet leaves behind the body, drag drags the water along. */

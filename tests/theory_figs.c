@@ -67,20 +67,23 @@ static void set_cell(Fluid *f, double amp)
 {
     int n = f->n;
     double h = 1.0 / n;
-    for (int j = 0; j <= n + 1; j++)
+    for (int j = 0; j <= n + 1; j++) {
         for (int i = 0; i <= n + 1; i++) {
             double x = (i - 0.5) * h, y = (j - 0.5) * h;
             f->u[AT(f, i, j)] = (float)(amp * PI * sin(PI * x) * cos(PI * y));
             f->v[AT(f, i, j)] = (float)(-amp * PI * cos(PI * x) * sin(PI * y));
         }
+    }
 }
 
 static double momentum_x(const Fluid *f)
 {
     double sum = 0.0;
-    for (int j = 1; j <= f->n; j++)
-        for (int i = 1; i <= f->n; i++)
+    for (int j = 1; j <= f->n; j++) {
+        for (int i = 1; i <= f->n; i++) {
             sum += f->u[AT(f, i, j)];
+        }
+    }
     return sum / ((double)f->n * f->n);
 }
 
@@ -149,10 +152,12 @@ static void fig_diffusion(void)
             yc[count] = (float)pow(per_step, k);
             count++;
         }
-        if (k == 500)
+        if (k == 500) {
             meas = f.u[AT(&f, n / 2, c)] / u0;
-        if (k < 1000)
+        }
+        if (k < 1000) {
             fluid_step(&f, dt);
+        }
     }
     value("diffusion-decay",
           "amplitude of a weak cell after 10 s, nu = 0.005, relative to the start (theory exp(-2 "
@@ -207,16 +212,18 @@ static void fig_advection(void)
             }
             grew = fmax(grew, e / prev - 1.0);
             prev = e;
-            if (k < 500)
+            if (k < 500) {
                 fluid_step(&f, 0.02f);
+            }
         }
         loss[m] = 1.0 - fluid_kinetic_energy(&f) / e0;
         resid[m] = fluid_max_divergence(&f) / fluid_max_abs_vorticity(&f);
-        if (m == 1)
+        if (m == 1) {
             value("advection-max-principle",
                   "largest vorticity after 10 s over the largest at the start, n = 48, no "
                   "viscosity (bilinear interpolation cannot overshoot: at most 1)",
                   fluid_max_abs_vorticity(&f) / peak0, 1.0);
+        }
         fluid_free(&f);
     }
     value("advection-loss-24",
@@ -341,11 +348,13 @@ static void fig_force(void)
           "net x momentum of the water one step later, over the momentum put in (an exact "
           "projection in a closed box leaves 0)",
           momentum_x(&f) / put, 0.0);
-    for (int k = 1; k < 100; k++)
+    for (int k = 1; k < 100; k++) {
         fluid_step(&f, 0.02f);
+    }
     value("box-momentum-100", "the same after 100 steps (2 s)", momentum_x(&f) / put, 0.0);
-    for (int k = 100; k < 1000; k++)
+    for (int k = 100; k < 1000; k++) {
         fluid_step(&f, 0.02f);
+    }
     value("box-momentum-1000", "the same after 1000 steps (20 s)", momentum_x(&f) / put, 0.0);
     Series s[] = {{"u added", ya, "#1f77b4"}, {"Gaussian", yb, "#d62728"}};
     plot("force.svg", "One force blob: velocity added along the row through its centre",
@@ -395,8 +404,9 @@ static void fig_vorticity(void)
         swimmer_step(&sw, &g, &c, 0.02f);
         fluid_step(&g, 0.02f);
         double e = fluid_kinetic_energy(&g);
-        if (k >= 400 && prev > 0.0)
+        if (k >= 400 && prev > 0.0) {
             grew = fmax(grew, e / prev - 1.0); /* the disc has stopped pushing by then */
+        }
         prev = e;
         peak = fmax(peak, e);
         if (k % 5 == 0) {
@@ -436,8 +446,9 @@ static void fig_swimmer(void)
         double rel = hypot(s.vx - uf, s.vy - vf);
         swimmer_step(&s, &f, &c, 0.02f);
         fluid_step(&f, 0.02f);
-        if (k == 0)
+        if (k == 0) {
             v1 = s.vx;
+        }
         if (k < 90 && swimmer_speed(&s) > top) {
             top = swimmer_speed(&s);
             rel_top = rel;
@@ -495,10 +506,11 @@ static void fig_swimmer(void)
         yb[count] = (float)(1000.0 * (0.002 + 0.03 * 0.01 * i) * 0.01 * i);
         yc[count] = 6.0f;
         count++;
-        if (i == 50)
+        if (i == 50) {
             value("drag-at-0.5",
                   "drag at a relative speed of 0.5 (theory (0.002 + 0.03 x 0.5) x 0.5)", q.drag,
                   0.0085);
+        }
         fluid_free(&g);
     }
     Series d[] = {{"drag x 1000", ya, "#1f77b4"},
@@ -528,14 +540,16 @@ static void fig_swimmer(void)
     must(fluid_init(&g, 16, 0.0004f));
     swimmer_init(&t, 0.5f, 0.5f, 0.0f);
     Controls turn = {1.0f, 0};
-    for (int k = 0; k < 50; k++)
+    for (int k = 0; k < 50; k++) {
         swimmer_step(&t, &g, &turn, 0.02f);
+    }
     value("turn-rate", "heading after 1 s of full turn (theory 2.5 rad)", t.heading, 2.5);
     swimmer_init(&t, 0.9f, 0.5f, 0.0f);
     t.vx = 3.0f;
     Controls none = {0.0f, 0};
-    for (int k = 0; k < 10; k++)
+    for (int k = 0; k < 10; k++) {
         swimmer_step(&t, &g, &none, 0.02f);
+    }
     value("wall-clamp-x", "x of a disc thrown at the right wall at speed 3 (theory 1 - radius)",
           t.x, 0.97);
     value("wall-clamp-v",
@@ -567,12 +581,13 @@ static void fig_sample(void)
     Fluid f;
     must(fluid_init(&f, 48, 0.0004f));
     int n = f.n;
-    for (int j = 0; j <= n + 1; j++)
+    for (int j = 0; j <= n + 1; j++) {
         for (int i = 0; i <= n + 1; i++) {
             double x = (i - 0.5) / n, y = (j - 0.5) / n;
             f.u[AT(&f, i, j)] = (float)(0.3 + 0.7 * x - 0.2 * y);
             f.v[AT(&f, i, j)] = (float)(0.1 * x + 0.4 * y);
         }
+    }
     double worst = 0.0;
     for (int k = 0; k < 500; k++) {
         float x = 0.02f + 0.96f * (float)((k * 37) % 500) / 500.0f,
@@ -595,8 +610,9 @@ static void fig_sample(void)
         xs[count] = x;
         ya[count] = u;
         yb[count] = (float)exact;
-        if (x > 0.02f && x < 0.98f)
+        if (x > 0.02f && x < 0.98f) {
             worst_sine = fmax(worst_sine, fabs(u - exact));
+        }
     }
     value("sample-sine",
           "largest error sampling the cell's u along y = 0.25 (second order: about (pi h)^2 / 8 of "
@@ -620,8 +636,9 @@ static void val_view(void)
         fprintf(stderr, "view_init failed\n");
         exit(1);
     }
-    for (int k = 0; k < 50; k++)
+    for (int k = 0; k < 50; k++) {
         view_step(0.0f, 1);
+    }
     const float *st = view_state();
     Fluid f;
     Swimmer s;
@@ -672,8 +689,9 @@ static void fig_jet(void)
         fluid_free(&f);
     }
     Journey j;
-    if (journey_init(&j, JE_ALL))
+    if (journey_init(&j, JE_ALL)) {
         exit(1);
+    }
     journey_answer(&j, 0);
     float u, v;
     fluid_sample(&j.water, 0.12f, 0.5f, &u, &v);
@@ -703,8 +721,9 @@ static void fig_jet(void)
 static void fig_stamina(void)
 {
     Journey a, b;
-    if (journey_init(&a, JE_ALL) || journey_init(&b, 0u))
+    if (journey_init(&a, JE_ALL) || journey_init(&b, 0u)) {
         exit(1);
+    }
     journey_answer(&a, 0);
     journey_answer(&b, 0);
     a.fish.heading = b.fish.heading =
@@ -716,12 +735,15 @@ static void fig_stamina(void)
         journey_step(&a, 0.0f, stroke);
         journey_step(&b, 0.0f, stroke);
         double t = (k + 1) * 0.02;
-        if (empty_a < 0.0 && a.winded)
+        if (empty_a < 0.0 && a.winded) {
             empty_a = t;
-        if (empty_b < 0.0 && b.winded)
+        }
+        if (empty_b < 0.0 && b.winded) {
             empty_b = t;
-        if (empty_a > 0.0 && back_a < 0.0 && !a.winded)
+        }
+        if (empty_a > 0.0 && back_a < 0.0 && !a.winded) {
             back_a = t;
+        }
         xs[count] = (float)t;
         ya[count] = a.stamina;
         yb[count] = b.stamina;
@@ -749,15 +771,17 @@ static void fig_stamina(void)
 static void fig_rules(void)
 {
     Journey j;
-    if (journey_init(&j, JE_ALL))
+    if (journey_init(&j, JE_ALL)) {
         exit(1);
+    }
     journey_answer(&j, 0);
     int count = 0;
     double first_ease = -1.0, flow0 = j.flow;
     for (int k = 0; k < 1750; k++) {
         journey_step(&j, 0.0f, 0);
-        if (first_ease < 0.0 && j.flow < flow0)
+        if (first_ease < 0.0 && j.flow < flow0) {
             first_ease = (k + 1) * 0.02;
+        }
         if (k % 5 == 0) {
             xs[count] = (float)((k + 1) * 0.02);
             ya[count] = j.flow;
@@ -784,8 +808,9 @@ static void fig_rules(void)
     /* A sweep, on a fresh reach: put the swimmer at 0.60, then let the bookkeeping see it 0.26
      * back. */
     journey_free(&j);
-    if (journey_init(&j, JE_ALL))
+    if (journey_init(&j, JE_ALL)) {
         exit(1);
+    }
     journey_answer(&j, 0);
     j.fish.x = 0.60f;
     j.fish.vx = 0.0f;
@@ -862,8 +887,9 @@ static void val_story(void)
               (journey_options(JS_OUTLET) == 2) + (journey_options(JS_SPRING) == 2),
           2.0);
     Journey j;
-    if (journey_init(&j, JE_ALL))
+    if (journey_init(&j, JE_ALL)) {
         exit(1);
+    }
     value("scene-first", "scene open right after journey_init (theory JS_OUTLET = 0)", j.scene,
           0.0);
     value("ending-before", "journey_ending before the spring (theory -1)", journey_ending(&j),
@@ -915,8 +941,9 @@ static void wake_job(const WakeJob *job, WakeOut *out)
 {
     Wake w;
     memset(out, 0, sizeof *out);
-    if (wake_init_setup(&w, &job->setup))
+    if (wake_init_setup(&w, &job->setup)) {
         exit(1);
+    }
     w.first_order = job->first_order;
     w.split_penalty = job->split;
     clock_t start = clock();
@@ -924,8 +951,9 @@ static void wake_job(const WakeJob *job, WakeOut *out)
     int steps = (int)(job->t_end / dt + 0.5f);
     float *cl = malloc((size_t)steps * sizeof(float)), *cd = malloc((size_t)steps * sizeof(float));
     float *cv = malloc((size_t)steps * sizeof(float));
-    if (!cl || !cd || !cv)
+    if (!cl || !cd || !cv) {
         exit(1);
+    }
     double sweeps = 0.0;
     for (int k = 0; k < steps; k++) {
         wake_step(&w, dt);
@@ -960,8 +988,9 @@ static void wake_job(const WakeJob *job, WakeOut *out)
     }
     out->mass = (float)(outflow / in - 1.0);
     out->cpu = (float)((double)(clock() - start) / CLOCKS_PER_SEC);
-    if (job->svg && render_wake_svg(&w, path(job->svg), job->title))
+    if (job->svg && render_wake_svg(&w, path(job->svg), job->title)) {
         exit(1);
+    }
     free(cl);
     free(cd);
     free(cv);
@@ -976,11 +1005,13 @@ static void wake_run_all(const WakeJob *jobs, WakeOut *outs, int count)
     while (done < count) {
         while (running < WAKE_JOBS && next < count) {
             int fd[2];
-            if (pipe(fd))
+            if (pipe(fd)) {
                 exit(1);
+            }
             pid_t pid = fork();
-            if (pid < 0)
+            if (pid < 0) {
                 exit(1);
+            }
             if (pid == 0) {
                 close(fd[0]);
                 static WakeOut out;
@@ -989,8 +1020,9 @@ static void wake_run_all(const WakeJob *jobs, WakeOut *outs, int count)
                 size_t left = sizeof out;
                 while (left > 0) {
                     ssize_t wrote = write(fd[1], p, left);
-                    if (wrote <= 0)
+                    if (wrote <= 0) {
                         _exit(1);
+                    }
                     p += wrote;
                     left -= (size_t)wrote;
                 }
@@ -1078,8 +1110,9 @@ static void fig_wake(void)
     static const float res[NRE] = {20, 30, 40, 50, 60, 80, 100, 150, 200};
     static WakeJob jobs[NJOBS];
     static WakeOut outs[NJOBS];
-    for (int k = 0; k < NRE; k++)
+    for (int k = 0; k < NRE; k++) {
         jobs[k] = wjob(8, res[k]);
+    }
     jobs[1].svg = "wake-steady.svg";
     jobs[1].title = "Re 30: a steady pair of attached eddies, t = 100 D/U (8 cells per D)";
     jobs[7].svg = "wake-street.svg";
@@ -1113,11 +1146,13 @@ static void fig_wake(void)
         5,         6,         7,      8,          J_FIRST, J_SPLIT,  J_SHIFT,  J_N6};
     static WakeJob queue[NJOBS];
     static WakeOut got[NJOBS];
-    for (int k = 0; k < NJOBS; k++)
+    for (int k = 0; k < NJOBS; k++) {
         queue[k] = jobs[order[k]];
+    }
     wake_run_all(queue, got, NJOBS);
-    for (int k = 0; k < NJOBS; k++)
+    for (int k = 0; k < NJOBS; k++) {
         outs[order[k]] = got[k];
+    }
     const WakeOut *r100 = &outs[6], *r150 = &outs[7], *r200 = &outs[8];
     const WakeOut *split = &outs[J_SPLIT], *wide = &outs[J_WIDE];
 
@@ -1161,8 +1196,9 @@ static void fig_wake(void)
          "coefficient", r100->traced, forces, 2);
     count = r100->traced < split->traced ? r100->traced : split->traced;
     int from = 0;
-    while (from < count && r100->t[from] < 5.0f)
+    while (from < count && r100->t[from] < 5.0f) {
         from++;
+    }
     for (int k = from; k < count; k++) {
         xs[k - from] = r100->t[k];
         ya[k - from] = r100->cd[k];

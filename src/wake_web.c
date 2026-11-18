@@ -37,15 +37,18 @@ static int traced, step_count;
 
 int wv_init(float reynolds, int cells_per_diameter)
 {
-    if (ready)
+    if (ready) {
         wake_free(&wake);
+    }
     ready = 0;
-    if (wake_init(&wake, cells_per_diameter, reynolds))
+    if (wake_init(&wake, cells_per_diameter, reynolds)) {
         return -1;
+    }
     free(field);
     field = calloc((size_t)wake.nx * (size_t)wake.ny, sizeof(float));
-    if (!field)
+    if (!field) {
         return -1;
+    }
     ready = 1;
     re_now = reynolds;
     dt = wake_dt(&wake);
@@ -70,8 +73,9 @@ static void measure(void)
 
 void wv_step(int steps)
 {
-    if (!ready)
+    if (!ready) {
         return;
+    }
     for (int k = 0; k < steps; k++) {
         wake_step(&wake, dt);
         if (recorded == WV_RECORD) { /* keep the newest half */
@@ -94,16 +98,18 @@ void wv_step(int steps)
             traced++;
         }
     }
-    if (wake.t >= 20.0)
+    if (wake.t >= 20.0) {
         measure();
+    }
 }
 
 /* t, Re, C_D, C_L, St, mean C_D, C_L amplitude, periods, nx, ny, cells per D, closed wake L/D,
  * max |div u|, start of the measured window, pressure sweeps of the last step. */
 const float *wv_state(void)
 {
-    if (!ready)
+    if (!ready) {
         return state;
+    }
     state[WV_T] = (float)wake.t;
     state[WV_RE] = re_now;
     state[WV_CD] = wake_drag_coefficient(&wake);
@@ -120,11 +126,14 @@ const float *wv_state(void)
 /* Vorticity of every cell, row-major from the bottom left [U / D]. */
 const float *wv_field(void)
 {
-    if (!ready)
+    if (!ready) {
         return NULL;
-    for (int j = 0; j < wake.ny; j++)
-        for (int i = 0; i < wake.nx; i++)
+    }
+    for (int j = 0; j < wake.ny; j++) {
+        for (int i = 0; i < wake.nx; i++) {
             field[i + wake.nx * j] = wake_vorticity_at(&wake, i, j);
+        }
+    }
     return field;
 }
 

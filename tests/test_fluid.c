@@ -22,20 +22,22 @@ static int failures;
 static void seed_vortex(Fluid *f)
 {
     const float pi = 3.14159265f;
-    for (int j = 1; j <= f->n; j++)
+    for (int j = 1; j <= f->n; j++) {
         for (int i = 1; i <= f->n; i++) {
             float x = ((float)i - 0.5f) / (float)f->n, y = ((float)j - 0.5f) / (float)f->n;
             f->u[i + (f->n + 2) * j] = sinf(pi * x) * cosf(pi * y);
             f->v[i + (f->n + 2) * j] = -cosf(pi * x) * sinf(pi * y);
         }
+    }
 }
 
 static void test_still_water_stays_still(void)
 {
     Fluid f;
     fluid_init(&f, 32, 0.001f);
-    for (int k = 0; k < 20; k++)
+    for (int k = 0; k < 20; k++) {
         fluid_step(&f, 0.02f);
+    }
     CHECK(fluid_kinetic_energy(&f) == 0.0f, "still water gained energy");
     fluid_free(&f);
 }
@@ -73,8 +75,9 @@ static void test_symmetry_of_mirrored_forcing(void)
     Fluid f;
     fluid_init(&f, 32, 0.001f);
     fluid_add_force(&f, 0.5f, 0.5f, 30.0f, 0.0f, 0.06f, 0.1f);
-    for (int k = 0; k < 10; k++)
+    for (int k = 0; k < 10; k++) {
         fluid_step(&f, 0.02f);
+    }
     float a, b, c, d;
     fluid_sample(&f, 0.5f, 0.3f, &a, &b);
     fluid_sample(&f, 0.5f, 0.7f, &c, &d);
@@ -134,8 +137,9 @@ static void test_render_draws_every_cell(void)
     static char buf[48 * 48 * 48];
     size_t used = render_frame(&f, &s, buf, sizeof buf);
     int blocks = 0;
-    for (char *p = buf; (p = strstr(p, "\xe2\x96\x80")) != NULL; p += 3)
+    for (char *p = buf; (p = strstr(p, "\xe2\x96\x80")) != NULL; p += 3) {
         blocks++;
+    }
     CHECK(used > 0 && blocks == 48 * 24, "expected %d half blocks, got %d", 48 * 24, blocks);
     CHECK(render_frame(&f, &s, buf, 16) == 0, "tiny buffer must be refused");
     fluid_free(&f);

@@ -72,19 +72,23 @@ static inline void policy_controls(Policy *p, const Journey *j, float *turn, int
     float err = remainderf(want + p->wobble - j->fish.heading, 6.2831853f);
     *turn = fmaxf(-1.0f, fminf(1.0f, err * 2.5f));
     float level = j->stamina / j->stamina_max;
-    if (!p->resting && level < p->rest)
+    if (!p->resting && level < p->rest) {
         p->resting = 1;
-    if (p->resting && level >= p->resume)
+    }
+    if (p->resting && level >= p->resume) {
         p->resting = 0;
+    }
     p->phase += 0.02f;
-    if (p->phase >= p->burst + p->glide)
+    if (p->phase >= p->burst + p->glide) {
         p->phase = 0.0f;
+    }
     *stroke = !p->resting && !j->winded && p->phase < p->burst;
     /* At a hold mark the ring fills only while the swimmer stays close: glide once inside, swim
      * back if pushed out. */
     if (journey_hold_need(j) > 0.0f &&
-        hypotf(tx - j->fish.x, ty - j->fish.y) < journey_hold_radius())
+        hypotf(tx - j->fish.x, ty - j->fish.y) < journey_hold_radius()) {
         *stroke = 0;
+    }
 }
 
 #endif

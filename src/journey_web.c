@@ -47,39 +47,45 @@ static void refresh(void)
                                     j->held,
                                     journey_hold_need(j),
                                     journey_hold_radius()};
-    for (int k = 0; k < JW_STATE_COUNT; k++)
+    for (int k = 0; k < JW_STATE_COUNT; k++) {
         state[k] = values[k];
-    for (int y = 1; y <= VIEW_GRID; y++)
+    }
+    for (int y = 1; y <= VIEW_GRID; y++) {
         for (int x = 1; x <= VIEW_GRID; x++) {
             int dst = ((y - 1) * VIEW_GRID + x - 1) * 3, src = y * (VIEW_GRID + 2) + x;
             field[dst] = fluid_vorticity_at(&j->water, x, y);
             field[dst + 1] = j->water.u[src];
             field[dst + 2] = j->water.v[src];
         }
+    }
 }
 
 int jw_init(void)
 {
-    if (ready)
+    if (ready) {
         journey_free(&journey);
+    }
     ready = journey_init(&journey, JE_ALL) == 0;
-    if (ready)
+    if (ready) {
         refresh();
+    }
     return !ready;
 }
 
 void jw_step(float turn, int stroke)
 {
-    if (!ready)
+    if (!ready) {
         return;
+    }
     journey_step(&journey, isfinite(turn) ? turn : 0.0f, stroke != 0);
     refresh();
 }
 
 int jw_answer(int option)
 {
-    if (!ready)
+    if (!ready) {
         return 1;
+    }
     int rc = journey_answer(&journey, option);
     refresh();
     return rc;

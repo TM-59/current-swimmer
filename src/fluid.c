@@ -25,11 +25,13 @@ static void lin_solve(const Fluid *f, int b, float *x, const float *x0, float a,
 {
     int n = f->n;
     for (int k = 0; k < 24; k++) {
-        for (int j = 1; j <= n; j++)
-            for (int i = 1; i <= n; i++)
+        for (int j = 1; j <= n; j++) {
+            for (int i = 1; i <= n; i++) {
                 x[IX(f, i, j)] = (x0[IX(f, i, j)] + a * (x[IX(f, i - 1, j)] + x[IX(f, i + 1, j)] +
                                                          x[IX(f, i, j - 1)] + x[IX(f, i, j + 1)])) /
                                  c;
+            }
+        }
         set_bnd(f, b, x);
     }
 }
@@ -49,14 +51,18 @@ static void advect(const Fluid *f, int b, float *d, const float *d0, const float
         for (int i = 1; i <= n; i++) {
             float x = (float)i - dt0 * u[IX(f, i, j)];
             float y = (float)j - dt0 * v[IX(f, i, j)];
-            if (x < 0.5f)
+            if (x < 0.5f) {
                 x = 0.5f;
-            if (x > (float)n + 0.5f)
+            }
+            if (x > (float)n + 0.5f) {
                 x = (float)n + 0.5f;
-            if (y < 0.5f)
+            }
+            if (y < 0.5f) {
                 y = 0.5f;
-            if (y > (float)n + 0.5f)
+            }
+            if (y > (float)n + 0.5f) {
                 y = (float)n + 0.5f;
+            }
             int i0 = (int)x, j0 = (int)y;
             float s1 = x - (float)i0, t1 = y - (float)j0;
             float s0 = 1.0f - s1, t0 = 1.0f - t1;
@@ -71,21 +77,23 @@ static void project(Fluid *f)
 {
     int n = f->n;
     float h = 1.0f / (float)n;
-    for (int j = 1; j <= n; j++)
+    for (int j = 1; j <= n; j++) {
         for (int i = 1; i <= n; i++) {
             f->div[IX(f, i, j)] = -0.5f * h *
                                   (f->u[IX(f, i + 1, j)] - f->u[IX(f, i - 1, j)] +
                                    f->v[IX(f, i, j + 1)] - f->v[IX(f, i, j - 1)]);
             f->p[IX(f, i, j)] = 0.0f;
         }
+    }
     set_bnd(f, 0, f->div);
     set_bnd(f, 0, f->p);
     lin_solve(f, 0, f->p, f->div, 1.0f, 4.0f);
-    for (int j = 1; j <= n; j++)
+    for (int j = 1; j <= n; j++) {
         for (int i = 1; i <= n; i++) {
             f->u[IX(f, i, j)] -= 0.5f * (f->p[IX(f, i + 1, j)] - f->p[IX(f, i - 1, j)]) / h;
             f->v[IX(f, i, j)] -= 0.5f * (f->p[IX(f, i, j + 1)] - f->p[IX(f, i, j - 1)]) / h;
         }
+    }
     set_bnd(f, 1, f->u);
     set_bnd(f, 2, f->v);
 }
@@ -140,27 +148,32 @@ void fluid_add_force(Fluid *f, float x, float y, float fx, float fy, float radiu
     int n = f->n;
     float h = 1.0f / (float)n;
     float inv = 1.0f / (2.0f * radius * radius);
-    for (int j = 1; j <= n; j++)
+    for (int j = 1; j <= n; j++) {
         for (int i = 1; i <= n; i++) {
             float dx = ((float)i - 0.5f) * h - x, dy = ((float)j - 0.5f) * h - y;
             float w = expf(-(dx * dx + dy * dy) * inv);
             f->u[IX(f, i, j)] += fx * w * dt;
             f->v[IX(f, i, j)] += fy * w * dt;
         }
+    }
 }
 
 void fluid_sample(const Fluid *f, float x, float y, float *u, float *v)
 {
     int n = f->n;
     float gx = x * (float)n + 0.5f, gy = y * (float)n + 0.5f;
-    if (gx < 0.5f)
+    if (gx < 0.5f) {
         gx = 0.5f;
-    if (gx > (float)n + 0.5f)
+    }
+    if (gx > (float)n + 0.5f) {
         gx = (float)n + 0.5f;
-    if (gy < 0.5f)
+    }
+    if (gy < 0.5f) {
         gy = 0.5f;
-    if (gy > (float)n + 0.5f)
+    }
+    if (gy > (float)n + 0.5f) {
         gy = (float)n + 0.5f;
+    }
     int i0 = (int)gx, j0 = (int)gy;
     float s1 = gx - (float)i0, t1 = gy - (float)j0;
     float s0 = 1.0f - s1, t0 = 1.0f - t1;
@@ -173,11 +186,12 @@ void fluid_sample(const Fluid *f, float x, float y, float *u, float *v)
 float fluid_kinetic_energy(const Fluid *f)
 {
     double sum = 0.0;
-    for (int j = 1; j <= f->n; j++)
+    for (int j = 1; j <= f->n; j++) {
         for (int i = 1; i <= f->n; i++) {
             double u = f->u[IX(f, i, j)], v = f->v[IX(f, i, j)];
             sum += 0.5 * (u * u + v * v);
         }
+    }
     return (float)(sum / ((double)f->n * (double)f->n));
 }
 
@@ -185,14 +199,16 @@ float fluid_max_divergence(const Fluid *f)
 {
     int n = f->n;
     float h = 1.0f / (float)n, worst = 0.0f;
-    for (int j = 1; j <= n; j++)
+    for (int j = 1; j <= n; j++) {
         for (int i = 1; i <= n; i++) {
             float d = 0.5f / h *
                       (f->u[IX(f, i + 1, j)] - f->u[IX(f, i - 1, j)] + f->v[IX(f, i, j + 1)] -
                        f->v[IX(f, i, j - 1)]);
-            if (fabsf(d) > worst)
+            if (fabsf(d) > worst) {
                 worst = fabsf(d);
+            }
         }
+    }
     return worst;
 }
 
@@ -207,21 +223,25 @@ float fluid_vorticity_at(const Fluid *f, int i, int j)
 float fluid_max_abs_vorticity(const Fluid *f)
 {
     float worst = 0.0f;
-    for (int j = 1; j <= f->n; j++)
+    for (int j = 1; j <= f->n; j++) {
         for (int i = 1; i <= f->n; i++) {
             float w = fabsf(fluid_vorticity_at(f, i, j));
-            if (w > worst)
+            if (w > worst) {
                 worst = w;
+            }
         }
+    }
     return worst;
 }
 
 float fluid_total_circulation(const Fluid *f)
 {
     double sum = 0.0;
-    for (int j = 1; j <= f->n; j++)
-        for (int i = 1; i <= f->n; i++)
+    for (int j = 1; j <= f->n; j++) {
+        for (int i = 1; i <= f->n; i++) {
             sum += fluid_vorticity_at(f, i, j);
+        }
+    }
     return (float)(sum / ((double)f->n * (double)f->n));
 }
 

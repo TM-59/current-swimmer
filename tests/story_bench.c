@@ -24,13 +24,16 @@ static void run_all(const Job *jobs, int n, RunResult *out)
 {
     const char *env = getenv("STORY_JOBS");
     int workers = env ? atoi(env) : 8;
-    if (workers < 1)
+    if (workers < 1) {
         workers = 1;
-    if (workers > n)
+    }
+    if (workers > n) {
         workers = n;
+    }
     int fds[64][2];
-    if (workers > 64)
+    if (workers > 64) {
         workers = 64;
+    }
     for (int w = 0; w < workers; w++) {
         if (pipe(fds[w])) {
             perror("pipe");
@@ -47,8 +50,9 @@ static void run_all(const Job *jobs, int n, RunResult *out)
                 RunResult r;
                 run_journey(jobs[i].key, jobs[i].effects, jobs[i].route, jobs[i].stay, &r);
                 if (write(fds[w][1], &i, sizeof i) != (ssize_t)sizeof i ||
-                    write(fds[w][1], &r, sizeof r) != (ssize_t)sizeof r)
+                    write(fds[w][1], &r, sizeof r) != (ssize_t)sizeof r) {
                     _exit(1);
+                }
             }
             _exit(0);
         }
@@ -66,8 +70,9 @@ static void run_all(const Job *jobs, int n, RunResult *out)
         fclose(in);
     }
     int status, failed = 0;
-    while (wait(&status) > 0)
+    while (wait(&status) > 0) {
         failed |= !WIFEXITED(status) || WEXITSTATUS(status) != 0;
+    }
     if (failed) {
         fputs("a story worker failed\n", stderr);
         exit(1);
@@ -84,8 +89,9 @@ static void play_row(char *buf, size_t cap, int i, const RunResult *r)
     size_t n = (size_t)snprintf(
         buf, cap, "{\"seed\": \"%d\", \"choices\": {\"culvert\": %d, \"reeds\": %d}, \"order\": [",
         i, route, stay);
-    for (int k = 0; k < r->order_len; k++)
+    for (int k = 0; k < r->order_len; k++) {
         n += (size_t)snprintf(buf + n, cap - n, "%s\"%s\"", k ? ", " : "", SCENE_ID[r->order[k]]);
+    }
     n += (size_t)snprintf(buf + n, cap - n, "], \"won\": %s, \"ending\": \"%s\", \"quiet\": [",
                           r->completed ? "true" : "false", ending_id(r->ending));
     int first = 1;
@@ -113,12 +119,14 @@ static void tension_row(char *buf, size_t cap, int i, int run, const RunResult *
                                 "{\"seed\": \"%d\", \"run\": %d, \"path\": {\"culvert\": \"%d\", "
                                 "\"reeds\": \"%d\"}, \"completed\": %s, \"crisis\": [",
                                 i, run, route, stay, r->completed ? "true" : "false");
-    for (int k = 0; k < J_REACHES; k++)
+    for (int k = 0; k < J_REACHES; k++) {
         n += (size_t)snprintf(buf + n, cap - n, "%s%d", k ? ", " : "",
                               r->failure[k] > 0 ? r->failure[k] : r->crisis[k]);
+    }
     n += (size_t)snprintf(buf + n, cap - n, "], \"failure\": [");
-    for (int k = 0; k < J_REACHES; k++)
+    for (int k = 0; k < J_REACHES; k++) {
         n += (size_t)snprintf(buf + n, cap - n, "%s%d", k ? ", " : "", r->failure[k]);
+    }
     snprintf(buf + n, cap - n, "]}");
 }
 
@@ -214,16 +222,22 @@ static int write_all(const char *dir)
     int n = np + na + nt;
     Job *jobs = calloc((size_t)n, sizeof *jobs);
     RunResult *res = calloc((size_t)n, sizeof *res);
-    if (!jobs || !res)
+    if (!jobs || !res) {
         return 1;
-    for (int i = 0; i < np; i++)
+    }
+    for (int i = 0; i < np; i++) {
         jobs[i] = play_job(i);
-    for (int a = 0; a < ARMS; a++)
-        for (int i = 0; i < ABLATION_SEEDS; i++)
+    }
+    for (int a = 0; a < ARMS; a++) {
+        for (int i = 0; i < ABLATION_SEEDS; i++) {
             jobs[np + a * ABLATION_SEEDS + i] = ablation_job(a, i);
-    for (int i = 0; i < TENSION_SEEDS; i++)
-        for (int k = 0; k < TENSION_RUNS; k++)
+        }
+    }
+    for (int i = 0; i < TENSION_SEEDS; i++) {
+        for (int k = 0; k < TENSION_RUNS; k++) {
             jobs[np + na + i * TENSION_RUNS + k] = tension_job(i, k);
+        }
+    }
     run_all(jobs, n, res);
     char row[1024];
 
@@ -302,8 +316,9 @@ static int write_all(const char *dir)
     fclose(f);
 
     double sec = 0;
-    for (int i = 0; i < ABLATION_SEEDS; i++)
+    for (int i = 0; i < ABLATION_SEEDS; i++) {
         sec += ab[i].seconds;
+    }
     printf("story bench: %d runs; mean journey %.1f s (default path)\n", n, sec / ABLATION_SEEDS);
     free(jobs);
     free(res);
@@ -324,8 +339,9 @@ static char *slurp(const char *dir, const char *name)
     long size = ftell(f);
     fseek(f, 0, SEEK_SET);
     char *buf = malloc((size_t)size + 1);
-    if (!buf || fread(buf, 1, (size_t)size, f) != (size_t)size)
+    if (!buf || fread(buf, 1, (size_t)size, f) != (size_t)size) {
         exit(1);
+    }
     buf[size] = 0;
     fclose(f);
     return buf;
@@ -343,19 +359,24 @@ static int check(const char *dir)
     /* Every policy key in the bench is distinct (paired arms share a seed by design). */
     int nk = PLAY_SEEDS + ABLATION_SEEDS + TENSION_SEEDS * TENSION_RUNS, k = 0;
     uint64_t *keys = malloc(sizeof *keys * (size_t)nk);
-    for (int i = 0; i < PLAY_SEEDS; i++)
+    for (int i = 0; i < PLAY_SEEDS; i++) {
         keys[k++] = play_key(i);
-    for (int i = 0; i < ABLATION_SEEDS; i++)
+    }
+    for (int i = 0; i < ABLATION_SEEDS; i++) {
         keys[k++] = ablation_key(i);
-    for (int i = 0; i < TENSION_SEEDS; i++)
-        for (int r = 0; r < TENSION_RUNS; r++)
+    }
+    for (int i = 0; i < TENSION_SEEDS; i++) {
+        for (int r = 0; r < TENSION_RUNS; r++) {
             keys[k++] = tension_key(i, r);
+        }
+    }
     qsort(keys, (size_t)nk, sizeof *keys, cmp_key);
-    for (int i = 1; i < nk; i++)
+    for (int i = 1; i < nk; i++) {
         if (keys[i] == keys[i - 1]) {
             fputs("[seed] duplicate run key\n", stderr);
             failures++;
         }
+    }
     free(keys);
 
     enum { CHECKS = 8 };
@@ -406,8 +427,9 @@ static int check(const char *dir)
     for (int i = 0; i < CHECKS; i++) {
         const char *hay = rows[i].file[0] == 'p' ? play : rows[i].file[0] == 'a' ? abl : ten;
         int found = 0;
-        for (const char *c = hay; (c = strstr(c, rows[i].text)); c++)
+        for (const char *c = hay; (c = strstr(c, rows[i].text)); c++) {
             found++;
+        }
         if (found != copies[i]) {
             fprintf(stderr, "[bench] %s.json does not match the code (%d of %d copies): %s\n",
                     rows[i].file, found, copies[i], rows[i].text);
@@ -429,10 +451,12 @@ static int check(const char *dir)
 
 int main(int argc, char **argv)
 {
-    if (argc == 3 && strcmp(argv[1], "--check") == 0)
+    if (argc == 3 && strcmp(argv[1], "--check") == 0) {
         return check(argv[2]);
-    if (argc == 2)
+    }
+    if (argc == 2) {
         return write_all(argv[1]);
+    }
     fputs("usage: story_bench <dir> | story_bench --check <dir>\n", stderr);
     return 2;
 }

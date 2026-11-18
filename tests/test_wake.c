@@ -16,8 +16,9 @@ static int failures;
 static void check(int ok, const char *what)
 {
     printf("%s %s\n", ok ? "ok  " : "FAIL", what);
-    if (!ok)
+    if (!ok) {
         failures++;
+    }
 }
 
 /* The zero-crossing counter on a known signal: C_L = 0.3 sin(2 pi f t) + 0.01 with f = 0.2. */
@@ -51,8 +52,9 @@ static void test_projection_and_mass(void)
         return;
     }
     float dt = wake_dt(&w);
-    for (int k = 0; k < 200; k++)
+    for (int k = 0; k < 200; k++) {
         wake_step(&w, dt);
+    }
     check(wake_max_divergence(&w) < 1e-4f,
           "projection: |div u| < 1e-4 U/D in every cell after each step");
     double in = 0.0, out = 0.0;
@@ -122,12 +124,15 @@ static void test_sharp_wall(void)
             return;
         }
         size_t count = (size_t)(w.nx + 1) * (size_t)(w.ny + 2);
-        for (size_t i = 0; i < count; i++)
-            if (w.chiu[i] > 0.0f && w.chiu[i] < 1.0f)
+        for (size_t i = 0; i < count; i++) {
+            if (w.chiu[i] > 0.0f && w.chiu[i] < 1.0f) {
                 fractional[sharp]++;
+            }
+        }
         float dt = wake_dt(&w);
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 10; i++) {
             wake_step(&w, dt);
+        }
         check(wake_max_divergence(&w) < 1e-4f,
               sharp ? "sharp-wall projection converges" : "blurred-wall projection converges");
         wake_free(&w);

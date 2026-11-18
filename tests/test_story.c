@@ -61,10 +61,12 @@ int main(void)
         }
         strcat(want, "], \"won\": true");
         int seeds = 0, orders = 0;
-        for (const char *c = text; (c = strstr(c, "\"seed\": ")); c++)
+        for (const char *c = text; (c = strstr(c, "\"seed\": ")); c++) {
             seeds++;
-        for (const char *c = text; (c = strstr(c, want)); c++)
+        }
+        for (const char *c = text; (c = strstr(c, want)); c++) {
             orders++;
+        }
         assert(seeds >= 8 && orders == seeds);
         assert(strstr(text, "\"ending\": \"end-stay\", \"quiet\": [\"reeds\", \"surge\"]"));
         assert(strstr(text, "\"ending\": \"end-left\", \"quiet\": [\"reeds\", \"surge\"]"));
@@ -76,8 +78,9 @@ int main(void)
         run_journey(play_key(1), JE_ALL, 1, 0, &r);
         assert(r.completed && r.order_len == JS_COUNT && r.ending == 0 && r.quiet[JS_REEDS] &&
                r.quiet[JS_SURGE]);
-        for (int k = 0; k < JS_COUNT; k++)
+        for (int k = 0; k < JS_COUNT; k++) {
             assert(r.order[k] == DESIGN[k]);
+        }
     }
 
     /* [mech] pace: while Silt sets the pace a beat of the tail costs 60 % of the stamina. */
@@ -131,8 +134,9 @@ int main(void)
             nb++;
             if (need > 0.0f) {
                 assert(mark == 1 && close_to(need, 18.0f));
-                if (b.held > held || b.mark > mark)
+                if (b.held > held || b.mark > mark) {
                     held_steps++;
+                }
                 assert(b.mark == mark || held + 0.02f >= 18.0f - 1e-3f);
             }
         }
@@ -209,8 +213,9 @@ int main(void)
                journey_hold_need(&b) == 0.0f);
         journey_step(&a, 0.0f, 0);
         assert(a.loud == loud && a.banner != JB_CLEAR);
-        if (stay == 0)
+        if (stay == 0) {
             puts("[quiet] reeds: shown with no cleared banner");
+        }
         float t_reeds = a.time;
         drive(&a, &p, JS_SURGE, 0, stay);
         drive(&b, &q, JS_SURGE, 0, stay);
@@ -226,8 +231,9 @@ int main(void)
         assert(close_to(a.flow / fa, stay == 0 ? 1.30f : 1.22f) && close_to(b.flow, fb));
         journey_step(&a, 0.0f, 1);
         assert(a.loud == loud && a.banner != JB_CLEAR);
-        if (stay == 0)
+        if (stay == 0) {
             puts("[quiet] surge: shown with no cleared banner");
+        }
         drive(&a, &p, JS_SPRING, 0, stay);
         assert(journey_ending(&a) == stay && a.loud == loud && a.banner != JB_CLEAR);
         journey_free(&a);
@@ -279,21 +285,24 @@ int main(void)
                 double tail = 0.0;
                 for (int x = k; x <= ABLATION_SEEDS; x++) {
                     double comb = 1.0;
-                    for (int y = 0; y < x; y++)
+                    for (int y = 0; y < x; y++) {
                         comb = comb * (ABLATION_SEEDS - y) / (y + 1);
+                    }
                     tail += comb;
                 }
                 double p = 2.0 * tail / pow(2.0, ABLATION_SEEDS);
                 double rel = fabs(diff / ABLATION_SEEDS) / fmax(fabs(base / ABLATION_SEEDS), 1.0);
-                if (p <= 0.05 && rel >= 0.05)
+                if (p <= 0.05 && rel >= 0.05) {
                     wins[lower0 > lower1 ? 0 : 1]++;
+                }
             }
             int dominated[2] = {0, 0};
-            for (int i = 0; i < ABLATION_SEEDS; i++)
+            for (int i = 0; i < ABLATION_SEEDS; i++) {
                 for (int hi = 0; hi < 2; hi++) {
                     const float *x = v[hi][i], *y = v[1 - hi][i];
                     dominated[hi] += x[0] <= y[0] && x[1] <= y[1] && (x[0] < y[0] || x[1] < y[1]);
                 }
+            }
             assert(wins[0] == 1 && wins[1] == 1);
             assert(dominated[0] < 0.85 * ABLATION_SEEDS && dominated[1] < 0.85 * ABLATION_SEEDS);
             printf("[choice] %s: each path wins one outcome; better-or-equal on both in %d/%d and "

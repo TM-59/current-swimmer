@@ -60,14 +60,16 @@ static int run_headless(const char *dir)
     Fluid f;
     Swimmer s;
     Log log = {0};
-    if (fluid_init(&f, GRID, VISC))
+    if (fluid_init(&f, GRID, VISC)) {
         return 1;
+    }
     swimmer_init(&s, 0.3f, 0.5f, 0.0f);
     float **cols[] = {&log.t, &log.speed, &log.energy, &log.vort, &log.re, &log.x, &log.y};
     for (size_t i = 0; i < sizeof cols / sizeof *cols; i++) {
         *cols[i] = calloc((size_t)steps, sizeof(float));
-        if (!*cols[i])
+        if (!*cols[i]) {
             return 1;
+        }
     }
 
     char path[512];
@@ -115,27 +117,33 @@ static int run_headless(const char *dir)
     for (size_t i = 0; i < sizeof plots / sizeof *plots; i++) {
         snprintf(path, sizeof path, "%s/%s", dir, plots[i].file);
         Series one = {plots[i].name, plots[i].y, plots[i].color};
-        if (svg_plot(path, plots[i].title, "time [s]", plots[i].ylabel, log.t, steps, &one, 1))
+        if (svg_plot(path, plots[i].title, "time [s]", plots[i].ylabel, log.t, steps, &one, 1)) {
             return 1;
+        }
     }
     snprintf(path, sizeof path, "%s/track.svg", dir);
     Series track = {"path", log.y, "#ff7f0e"};
-    if (svg_plot(path, "Swimmer track (top view)", "x", "y", log.x, steps, &track, 1))
+    if (svg_plot(path, "Swimmer track (top view)", "x", "y", log.x, steps, &track, 1)) {
         return 1;
+    }
 
     snprintf(path, sizeof path, "%s/wake.svg", dir);
-    if (render_field_svg(&f, &s, path))
+    if (render_field_svg(&f, &s, path)) {
         return 1;
+    }
 
     float peak = 0.0f;
-    for (int k = 0; k < steps; k++)
-        if (log.speed[k] > peak)
+    for (int k = 0; k < steps; k++) {
+        if (log.speed[k] > peak) {
             peak = log.speed[k];
+        }
+    }
     printf("steps=%d peak_speed=%.3f peak_re=%.0f final_energy=%.3g max_div=%.3g\n", steps, peak,
            reynolds_number(peak, 2.0f * s.radius, f.visc), log.energy[steps - 1],
            fluid_max_divergence(&f));
-    for (size_t i = 0; i < sizeof cols / sizeof *cols; i++)
+    for (size_t i = 0; i < sizeof cols / sizeof *cols; i++) {
         free(*cols[i]);
+    }
     fluid_free(&f);
     return 0;
 }
@@ -144,8 +152,9 @@ static int run_snapshot(void)
 {
     Fluid f;
     Swimmer s;
-    if (fluid_init(&f, GRID, VISC))
+    if (fluid_init(&f, GRID, VISC)) {
         return 1;
+    }
     swimmer_init(&s, 0.3f, 0.5f, 0.0f);
     for (int k = 0; k < (int)(6.0f / DT); k++) {
         Controls c;
@@ -155,8 +164,9 @@ static int run_snapshot(void)
     }
     size_t cap = (size_t)GRID * (size_t)GRID * 48u;
     char *buf = malloc(cap);
-    if (!buf)
+    if (!buf) {
         return 1;
+    }
     size_t used = render_frame(&f, &s, buf, cap);
     fwrite(buf, 1, used, stdout);
     free(buf);
@@ -170,8 +180,9 @@ static int vorticity_index(float w, float ref)
 {
     float t = tanhf(w / ref);
     int level = (int)(fabsf(t) * 6.0f + 0.5f);
-    if (level > 6)
+    if (level > 6) {
         level = 6;
+    }
     return level == 0 ? 0 : (t < 0.0f ? level : 6 + level);
 }
 
@@ -180,28 +191,33 @@ static void paint_frame(const Fluid *f, const Swimmer *s, int scale, unsigned ch
 {
     int n = f->n, size = n * scale;
     float ref = fluid_max_abs_vorticity(f);
-    if (ref < 1.0f)
+    if (ref < 1.0f) {
         ref = 1.0f;
+    }
     ref *= 0.5f;
-    for (int j = 0; j < n; j++)
+    for (int j = 0; j < n; j++) {
         for (int i = 0; i < n; i++) {
             unsigned char c =
                 (unsigned char)vorticity_index(fluid_vorticity_at(f, i + 1, j + 1), ref);
-            for (int dy = 0; dy < scale; dy++)
+            for (int dy = 0; dy < scale; dy++) {
                 memset(px + ((n - 1 - j) * scale + dy) * size + i * scale, c, (size_t)scale);
+            }
         }
+    }
     float bx = s->x * (float)size, by = (1.0f - s->y) * (float)size, rad = s->radius * (float)size;
     float nx = bx + cosf(s->heading) * (rad + (float)scale),
           ny = by - sinf(s->heading) * (rad + (float)scale);
-    for (int y = 0; y < size; y++)
+    for (int y = 0; y < size; y++) {
         for (int x = 0; x < size; x++) {
             float dx = (float)x + 0.5f - bx, dy = (float)y + 0.5f - by;
             float ex = (float)x + 0.5f - nx, ey = (float)y + 0.5f - ny;
-            if (dx * dx + dy * dy <= rad * rad)
+            if (dx * dx + dy * dy <= rad * rad) {
                 px[y * size + x] = 13;
-            else if (ex * ex + ey * ey <= (float)(scale * scale))
+            } else if (ex * ex + ey * ey <= (float)(scale * scale)) {
                 px[y * size + x] = 14;
+            }
         }
+    }
 }
 
 /* Scripted swim (the --headless route) as an animated GIF of the vorticity field. */
@@ -210,8 +226,9 @@ static int run_gif(const char *path)
     enum { SCALE = 8, STRIDE = 9 };
     Fluid f;
     Swimmer s;
-    if (fluid_init(&f, GRID, VISC))
+    if (fluid_init(&f, GRID, VISC)) {
         return 1;
+    }
     swimmer_init(&s, 0.3f, 0.5f, 0.0f);
     unsigned char pal[GIF_COLOURS][3] = {
         {12, 16, 30},    {30, 50, 100},   {40, 75, 150},   {55, 105, 195},  {80, 140, 230},
@@ -262,13 +279,15 @@ static int run_interactive(void)
 
     Fluid f;
     Swimmer s;
-    if (fluid_init(&f, GRID, VISC))
+    if (fluid_init(&f, GRID, VISC)) {
         return 1;
+    }
     swimmer_init(&s, 0.3f, 0.5f, 0.0f);
     size_t cap = (size_t)GRID * (size_t)GRID * 48u;
     char *buf = malloc(cap);
-    if (!buf)
+    if (!buf) {
         return 1;
+    }
 
     float stroke_left = 0.0f, turn_left = 0.0f, turn_dir = 0.0f, t = 0.0f;
     int paused = 0;
@@ -276,13 +295,13 @@ static int run_interactive(void)
     while (!stop_flag) {
         char key;
         while (read(STDIN_FILENO, &key, 1) == 1) {
-            if (key == 'q')
+            if (key == 'q') {
                 stop_flag = 1;
-            else if (key == 'p')
+            } else if (key == 'p') {
                 paused = !paused;
-            else if (key == ' ' || key == 'w')
+            } else if (key == ' ' || key == 'w') {
                 stroke_left = 0.2f;
-            else if (key == 'a') {
+            } else if (key == 'a') {
                 turn_dir = 1.0f;
                 turn_left = 0.2f;
             } else if (key == 'd') {
@@ -319,16 +338,18 @@ static int run_interactive(void)
 static int run_karman(const char *dir)
 {
     Wake w;
-    if (wake_init(&w, 8, 150.0f))
+    if (wake_init(&w, 8, 150.0f)) {
         return 1;
+    }
     float dt = wake_dt(&w);
     int steps = (int)(100.0f / dt + 0.5f), every = 4, count = 0;
     float *cl = calloc((size_t)steps, sizeof(float)), *cd = calloc((size_t)steps, sizeof(float));
     float *t = calloc((size_t)steps / (size_t)every + 1, sizeof(float));
     float *pl = calloc((size_t)steps / (size_t)every + 1, sizeof(float)),
           *pd = calloc((size_t)steps / (size_t)every + 1, sizeof(float));
-    if (!cl || !cd || !t || !pl || !pd)
+    if (!cl || !cd || !t || !pl || !pd) {
         return 1;
+    }
     for (int k = 0; k < steps; k++) {
         wake_step(&w, dt);
         cl[k] = wake_lift_coefficient(&w);
@@ -354,8 +375,9 @@ static int run_karman(const char *dir)
     snprintf(path, sizeof path, "%s/karman-forces.svg", dir);
     Series series[] = {{"C_D drag", pd, "#c0392b"}, {"C_L lift", pl, "#2471a3"}};
     if (svg_plot(path, "Forces on the cylinder, Re 150 (8 cells per D)", "t [D/U]", "coefficient",
-                 t, count, series, 2))
+                 t, count, series, 2)) {
         return 1;
+    }
     printf("Re 150, 8 cells/D, %d steps of %.4f D/U: St = %.4f, mean C_D = %.4f, C_L amplitude = "
            "%.4f over %d periods\n",
            steps, dt, s.strouhal, s.cd_mean, s.cl_amp, s.periods);
@@ -370,16 +392,21 @@ static int run_karman(const char *dir)
 
 int main(int argc, char **argv)
 {
-    if (argc >= 2 && !strcmp(argv[1], "--headless"))
+    if (argc >= 2 && !strcmp(argv[1], "--headless")) {
         return run_headless(argc >= 3 ? argv[2] : "docs");
-    if (argc >= 2 && !strcmp(argv[1], "--snapshot"))
+    }
+    if (argc >= 2 && !strcmp(argv[1], "--snapshot")) {
         return run_snapshot();
-    if (argc >= 2 && !strcmp(argv[1], "--gif"))
+    }
+    if (argc >= 2 && !strcmp(argv[1], "--gif")) {
         return run_gif(argc >= 3 ? argv[2] : "demo.gif");
-    if (argc >= 2 && !strcmp(argv[1], "--karman"))
+    }
+    if (argc >= 2 && !strcmp(argv[1], "--karman")) {
         return run_karman(argc >= 3 ? argv[2] : "docs");
-    if (argc == 1)
+    }
+    if (argc == 1) {
         return run_interactive();
+    }
     fprintf(stderr,
             "usage: %s [--headless [outdir] | --snapshot | --gif [file] | --karman [outdir]]\n",
             argv[0]);
