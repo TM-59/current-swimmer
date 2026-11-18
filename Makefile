@@ -1,6 +1,9 @@
 CC      ?= cc
 CFLAGS  ?= -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror
 LDLIBS  += -lm
+# The terminal mode of src/main.c is POSIX; the feature macro is set here because a name starting
+# with an underscore and a capital letter is reserved inside the program.
+POSIX   := -D_POSIX_C_SOURCE=200809L
 SRC     := src/fluid.c src/swimmer.c src/svg.c src/render.c src/gif.c src/wake.c
 STORY   := src/fluid.c src/swimmer.c src/journey.c
 
@@ -8,7 +11,7 @@ STORY   := src/fluid.c src/swimmer.c src/journey.c
 all: current-swimmer
 
 current-swimmer: $(SRC) src/main.c
-	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) $(CFLAGS) $(POSIX) -o $@ $^ $(LDLIBS)
 
 test_fluid: $(SRC) tests/test_fluid.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
@@ -128,3 +131,35 @@ tm-deps:
 
 test-tm-e2e: tm-ctest tm-deps
 	"$(TM_TEST_CTEST)" --test-dir .tm-ctest -j 1 -L '^e2e$$' --output-on-failure --output-junit "$(CURDIR)/test-results/e2e.xml"
+
+# ---- Formatter, linter and type checker (no ignores) ----
+# C: clang-format, clang-tidy (.clang-tidy) and the compiler with -Wall -Wextra -Wpedantic -Werror.
+# Python (scripts/*.py): Ruff format, Ruff with every rule, mypy strict. Shell: shfmt and ShellCheck.
+# These are pinned by uv.lock. JavaScript, CSS, HTML, JSON: Biome (recommended rules, warnings fail)
+# and tsc --checkJs strict, pinned by package-lock.json. TIDY_EXTRA passes -isystem paths when the C
+# library headers are elsewhere.
+RUN        = uv run --locked
+STYLE_C    = $(shell git ls-files '*.c' '*.h')
+STYLE_TU   = $(shell git ls-files '*.c')
+STYLE_SH   = $(shell git ls-files '*.sh')
+TIDY_EXTRA ?=
+.PHONY: fmt lint typecheck check-style
+fmt:
+	$(RUN) clang-format -i $(STYLE_C)
+	$(RUN) ruff format scripts
+	$(RUN) ruff check --fix scripts
+	$(RUN) shfmt -w -i 2 $(STYLE_SH)
+	npm run fmt
+lint:
+	$(RUN) clang-format --dry-run --Werror $(STYLE_C)
+	$(RUN) clang-tidy $(STYLE_TU) -- -std=c11 -Isrc -Itests $(POSIX) $(TIDY_EXTRA)
+	$(RUN) ruff format --check scripts
+	$(RUN) ruff check scripts
+	$(RUN) shfmt -d -i 2 $(STYLE_SH)
+	$(RUN) shellcheck $(STYLE_SH)
+	npm run lint
+typecheck:
+	for f in $(STYLE_TU); do $(CC) $(CFLAGS) $(POSIX) -Isrc -Itests -fsyntax-only $$f || exit 1; done
+	$(RUN) mypy
+	npm run typecheck
+check-style: lint typecheck

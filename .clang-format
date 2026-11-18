@@ -1,0 +1,6 @@
+# clang-format's LLVM style with the four-space indent and the brace placement this code base
+# already uses (function braces on their own line, others on the same line).
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 100
+BreakBeforeBraces: Linux
