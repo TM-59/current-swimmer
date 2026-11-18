@@ -15,7 +15,10 @@ int gif_frame(Gif *g, const unsigned char *pixels, int hold_cs);
 int gif_close(Gif *g);
 
 /* Text screens: each character is drawn with a built-in 5x7 glyph in a 6x9 cell, times scale. */
-void gif_text_size(const char *text, int scale, int *width, int *height);
+typedef struct {
+    int width, height;
+} GifSize;
+GifSize gif_text_size(const char *text, int scale);
 /* Clears the buffer to index 0 and draws `text` (lines separated by '\n'). */
 void gif_draw_text(unsigned char *pixels, int width, int height, const char *text, int scale,
                    int (*colour_of)(char));
