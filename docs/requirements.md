@@ -43,3 +43,20 @@
 | reeds: 去る | とどまらない、堰板は中間点で外れ噴流 ×1.22 |
 
 流されて取った距離のうち 0.2 を失うと「流された」(輪の中にとどまっている間は数えない)。そのつど噴流 ×0.85、区間に 10 秒かかるごとにも ×0.85。
+
+## 要件 ID とテストの対応(M61)
+
+`make check` の trace は、下の ID を名前に持つ CTest の testcase(`tests/ctest/CMakeLists.txt`)だけを集める。
+対応は名前の宣言で、要件を満たすことの意味的な証明ではない。
+
+### REQ-pool-physics
+池の流体と円盤の泳ぎ手(`src/fluid.c`・`src/swimmer.c`)が元の C モデルと一致する。900 ステップ・2,304 セル・参照 CSV 900 行。
+対応: `test_fluid`・`test_view`。
+
+### REQ-story
+物語「Upstream」の順・各 `JE_*` の効果・選択の得と損・bench の 8 行が今のコードの出力と一致する。
+対応: `test_story`・`story_bench --check`。
+
+### REQ-wake
+円柱の後流(`src/wake.c`)で Re 100/150/200 の St が 0.16..0.22、平均 C_D が 1.3..1.9、Re 30 で渦が出ない。
+対応: `test_wake`。
