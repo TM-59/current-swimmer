@@ -13,6 +13,26 @@
     15px / 1.5 system-ui,
     sans-serif;
 }
+/* Groups of controls are <fieldset> and the Strouhal band is a <figure>; drop their default frame
+ * and margins so they lay out like a box. */
+fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+figure {
+  margin: 0;
+}
+/* Read by screen readers, not drawn (the stamina bar's name). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 * {
   box-sizing: border-box;
 }
@@ -44,6 +64,11 @@ header {
   font-size: 16px;
   font-weight: 650;
   letter-spacing: 2px;
+}
+dt small {
+  display: block;
+  font-size: 14px;
+  color: var(--muted);
 }
 .brand small {
   display: block;
@@ -134,11 +159,6 @@ h1 {
   font-size: 15px;
   color: #d8e6df;
   margin: 8px 0 18px;
-}
-#welcome small {
-  font-size: 14px;
-  color: var(--muted);
-  margin-top: 14px;
 }
 button {
   border: 1px solid var(--line);
@@ -265,10 +285,6 @@ summary:focus-visible {
   background: var(--mint);
   color: #102e2b;
 }
-.touch kbd {
-  font-size: 14px;
-  margin-left: 6px;
-}
 kbd {
   font-family: inherit;
   font-size: 14px;
@@ -276,6 +292,10 @@ kbd {
   border: 1px solid #577179;
   border-radius: 3px;
   padding: 0 4px;
+}
+.touch kbd {
+  font-size: 14px;
+  margin-left: 6px;
 }
 #hint {
   margin: 10px auto 0;
@@ -346,10 +366,10 @@ dl > div {
 dt {
   font-size: 14px;
 }
-dt small {
-  display: block;
+#welcome small {
   font-size: 14px;
   color: var(--muted);
+  margin-top: 14px;
 }
 dd {
   margin: 0;
@@ -422,9 +442,6 @@ footer {
   background: linear-gradient(0deg, #061820f2 70%, #06182000);
   font-size: 15px;
   line-height: 1.45;
-}
-#scene p {
-  margin: 0 0 9px;
 }
 #scene b {
   color: var(--mint);
@@ -891,6 +908,9 @@ a.nav:focus-visible {
   font-size: 14px;
   color: #d8e6df;
   margin: 8px 0;
+}
+#scene p {
+  margin: 0 0 9px;
 }
 @media (max-width: 760px) {
   .wk-main {

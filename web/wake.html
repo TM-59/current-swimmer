@@ -8,7 +8,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
   <script defer src="physics.js"></script>
-  <script defer src="wake.js"></script>
+  <script type="module" src="wake.js"></script>
 </head>
 <body class="wake-page">
 <header>
@@ -24,7 +24,7 @@
       <label for="wk-re">Reynolds number <output id="wk-re-out">150</output></label>
       <input id="wk-re" type="range" min="20" max="200" step="10" value="150" aria-describedby="wk-re-help">
       <p id="wk-re-help">Re = U D / ν. Moving the slider starts the water again from rest.</p>
-      <div class="wk-buttons"><button id="wk-pause">Pause</button><button id="wk-restart">Start again</button><button id="wk-preset-30">Re 30</button><button id="wk-preset-100">Re 100</button><button id="wk-preset-200">Re 200</button></div>
+      <div class="wk-buttons"><button type="button" id="wk-pause">Pause</button><button type="button" id="wk-restart">Start again</button><button type="button" id="wk-preset-30">Re 30</button><button type="button" id="wk-preset-100">Re 100</button><button type="button" id="wk-preset-200">Re 200</button></div>
     </div>
     <div class="section-label wk-chart-label">FORCES ON THE POST <span>last 80 D/U</span></div>
     <canvas id="wk-forces" width="720" height="220" aria-label="Drag and lift coefficients against time"></canvas>
@@ -39,11 +39,11 @@
         <div><dt>Lift swing <small>C<sub>L</sub> amplitude</small></dt><dd id="wk-cl">—</dd></div>
         <div><dt>Closed wake <small>eddy length L / D</small></dt><dd id="wk-lr">—</dd></div>
       </dl>
-      <div class="wk-band" aria-label="Strouhal number against the literature band">
+      <figure class="wk-band" aria-label="Strouhal number against the literature band">
         <div class="wk-band-bar"><span class="wk-band-ok" style="left:37.5%;width:37.5%"></span><span id="wk-mark-fit" class="wk-mark-fit"></span><span id="wk-mark-st" class="wk-mark-st" hidden></span></div>
         <div class="wk-band-scale"><span>0.10</span><span>0.16</span><span>0.22</span><span>0.26</span></div>
         <p>Green: the band 0.16–0.22 for Re 100–200. Grey line: Roshko's 1954 fit 0.212 (1 − 21.2 / Re) <span id="wk-fit">0.182</span>; outside 50 &lt; Re &lt; 150 it is extrapolated. Orange: this run.</p>
-      </div>
+      </figure>
       <p id="wk-compare" class="wk-compare">Measuring starts after 20 D/U, over the newest half of the record.</p>
     </section>
     <section class="notes"><h2>How it is computed</h2><p>The same C code as <kbd>./current-swimmer --karman</kbd>, compiled to WebAssembly: a staggered grid, MacCormack advection, a pressure solve to 1 × 10⁻⁴ U/D and a volume-penalised post. The force includes the removed momentum and the pressure impulse on the post.</p><details><summary>Limits</summary><p>The browser uses 6 cells per diameter (the checks of <kbd>make test</kbd>); the handbook measures 6 to 16. The channel walls block 1/8 of the width. At Re 100 the solid-aware projection and a larger domain reduce the measured drag; its value still depends on the wall shape and resolution. The often-quoted open-water drag has not been checked against its original source. Above Re about 190 a real wake turns three-dimensional; this one cannot.</p></details><p><a class="nav" href="https://github.com/TM-59/current-swimmer/blob/main/docs/theory/05-wake.md">Theory: page 5 of the handbook</a></p></section>
