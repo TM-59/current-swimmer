@@ -1,4 +1,16 @@
 // Words for "Upstream". The scenes open where the C journey (src/journey.c) says; the text lives here.
+/**
+ * A line of a scene: who speaks ('' for narration) and the words, or a function of the two choices.
+ * @typedef {[string, string | ((route: number, stay: number) => string)]} Line
+ */
+/**
+ * @typedef {object} Story
+ * @property {Line[]} [lines]
+ * @property {Line[][]} [endings]
+ * @property {string[]} options
+ * @property {boolean} [heavy]
+ */
+/** @type {Record<string, Story>} */
 const STORY = {
   outlet: {
     lines: [
@@ -32,6 +44,7 @@ const STORY = {
     lines: [
       [
         '',
+        /** @param {number} route */
         (route) =>
           route === 1
             ? 'The weir took its time. The pond took more of itself while they waited.'
@@ -82,6 +95,10 @@ const STORY = {
       ['Copperfin', 'That was home. You could have waited one more day.'],
       [
         '',
+        /**
+         * @param {number} _route
+         * @param {number} stay
+         */
         (_route, stay) =>
           stay === 1
             ? 'You left the reeds early. The worst of the flood is still behind the stone.'
@@ -127,10 +144,32 @@ const REACHES = [
 ];
 
 (async () => {
-  const $ = (id) => document.getElementById(id);
-  const canvas = $('water'),
-    ctx = canvas.getContext('2d');
-  const chart = $('speed-plot').getContext('2d');
+  /** @param {string} id */
+  const $ = (id) => {
+    const element = document.getElementById(id);
+    if (!element) throw new Error(`missing #${id}`);
+    return element;
+  };
+  /**
+   * @template {HTMLElement} T
+   * @param {string} id
+   * @param {{ new (): T, name: string }} type
+   * @returns {T}
+   */
+  const $as = (id, type) => {
+    const element = $(id);
+    if (!(element instanceof type)) throw new Error(`#${id} is not a ${type.name}`);
+    return element;
+  };
+  /** @param {HTMLCanvasElement} canvas */
+  const context2d = (canvas) => {
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('no 2D canvas context');
+    return context;
+  };
+  const canvas = $as('water', HTMLCanvasElement),
+    ctx = context2d(canvas);
+  const chart = context2d($as('speed-plot', HTMLCanvasElement));
   const fish = new Image(),
     pond = new Image();
   fish.src = 'assets/hero-fish.png';
@@ -144,18 +183,22 @@ const REACHES = [
     ),
   );
   $('art-warning').hidden = artwork.every(Boolean);
-  document.querySelector('.specimen img').hidden = !artwork[0];
+  const specimen = document.querySelector('.specimen img');
+  if (specimen instanceof HTMLElement) specimen.hidden = !artwork[0];
+  /** @type {SwimmerModule} */
   let mod;
   try {
     mod = await createSwimmer();
     if (mod._view_init() || mod._jw_init()) throw Error('Water allocation failed');
   } catch (e) {
     $('status').textContent = 'WATER COULD NOT LOAD';
-    $('welcome').querySelector('p:not(.eyebrow)').textContent =
-      'Reload to try again. This view needs its local physics.wasm file.';
+    const note = $('welcome').querySelector('p:not(.eyebrow)');
+    if (note)
+      note.textContent = 'Reload to try again. This view needs its local physics.wasm file.';
     console.error(e);
     return;
   }
+  /** @type {(ptr: number, n: number) => Float32Array} */
   const floats = (ptr, n) => mod.HEAPF32.subarray(ptr / 4, ptr / 4 + n);
   const journeyState = () => floats(mod._jw_state(), 33);
   // Both modes are read through the free-swim layout: x y heading speed Re thrust drag energy div time radius |ω|.
@@ -190,8 +233,10 @@ const REACHES = [
     OX = (W - S) / 2;
     OY = (H - S) / 2;
   }
-  const PX = (x) => OX + x * S,
-    PY = (y) => OY + (1 - y) * S;
+  /** @param {number} x */
+  const PX = (x) => OX + x * S;
+  /** @param {number} y */
+  const PY = (y) => OY + (1 - y) * S;
   fit();
 
   let mode = 'title',
@@ -201,18 +246,25 @@ const REACHES = [
     previousSample = -1,
     shownScene = -2,
     resetArmed = 0;
-  const keyboard = new Set(),
-    pointers = new Map(),
-    trail = [],
-    speeds = [],
-    heavyLog = [],
-    drawnTexts = [];
+  /** @type {Set<string>} */
+  const keyboard = new Set();
+  /** @type {Map<number, string>} */
+  const pointers = new Map();
+  /** @type {number[][]} the last positions, for the wake trail */
+  const trail = [];
+  /** @type {number[][]} (time, speed) pairs of the last 20 s */
+  const speeds = [];
+  /** @type {{ id: string, banner: number, loud: number }[]} */
+  const heavyLog = [];
+  /** @type {{ text: string, px: number }[]} */
+  const drawnTexts = [];
   // Touch on the water. A tap sets a destination: Copperfin turns and swims there, push then let go (0.6 s strokes,
   // 0.26 s glides), until it arrives or 8 s pass. Holding or dragging steers towards the finger while it is down;
   // on release Copperfin goes back to the tapped destination, if there is one.
   const aim = {
     active: false,
     held: false,
+    /** @type {number | null} */
     id: null,
     x: 0,
     y: 0,
@@ -225,7 +277,9 @@ const REACHES = [
     dy: 0,
     left: 0,
   };
-  const control = (name) => keyboard.has(name) || [...pointers.values()].includes(name);
+  /** @param {string | undefined} name */
+  const control = (name) =>
+    name !== undefined && (keyboard.has(name) || [...pointers.values()].includes(name));
   function clearInput() {
     keyboard.clear();
     pointers.clear();
@@ -235,15 +289,17 @@ const REACHES = [
   }
   function paintControls() {
     for (const b of document.querySelectorAll('[data-control]')) {
-      b.classList.toggle('held', control(b.dataset.control));
+      if (b instanceof HTMLElement) b.classList.toggle('held', control(b.dataset.control));
     }
   }
+  /** @param {boolean} value */
   function setPaused(value) {
     paused = value;
     accumulator = 0;
     clearInput();
     $('pause').textContent = paused ? 'Resume' : 'Pause';
   }
+  /** @param {string} next */
   function begin(next) {
     mode = next;
     if (next === 'journey') mod._jw_init();
@@ -255,14 +311,17 @@ const REACHES = [
     trail.length = speeds.length = 0;
     previousSample = -1;
     $('welcome').hidden = true;
-    $('pause').disabled = $('reset').disabled = false;
+    $as('pause', HTMLButtonElement).disabled = $as('reset', HTMLButtonElement).disabled = false;
     $('journey-hud').hidden = next !== 'journey';
     $('story').hidden = next === 'journey';
     $('hint').hidden = false;
     $('reset').textContent = next === 'journey' ? 'Start the journey again' : 'Reset water';
     showScene();
   }
-  $('start').disabled = $('demo').disabled = $('upstream').disabled = false;
+  $as('start', HTMLButtonElement).disabled =
+    $as('demo', HTMLButtonElement).disabled =
+    $as('upstream', HTMLButtonElement).disabled =
+      false;
   $('start').onclick = () => begin('swim');
   $('demo').onclick = () => begin('demo');
   $('upstream').onclick = () => begin('journey');
@@ -301,7 +360,7 @@ const REACHES = [
     if (s.heavy) heavyLog.push({ id, banner: j[12], loud: j[24] });
     const text = $('scene-text');
     text.replaceChildren(
-      ...lines.map(([who, words]) => {
+      ...(lines ?? []).map(([who, words]) => {
         const p = document.createElement('p');
         const said = typeof words === 'function' ? words(route, stay) : words;
         if (who) {
@@ -320,14 +379,16 @@ const REACHES = [
       ...s.options.map((label, option) => {
         const b = document.createElement('button');
         b.textContent = label;
-        b.dataset.option = option;
+        b.dataset.option = String(option);
         b.onclick = () => answer(option);
         return b;
       }),
     );
     sceneBox.scrollTop = 0;
-    choices.firstChild.focus({ preventScroll: true });
+    const first = choices.firstElementChild;
+    if (first instanceof HTMLElement) first.focus({ preventScroll: true });
   }
+  /** @param {number} option */
   function answer(option) {
     const j = journeyState();
     if (SCENES[j[11]] === 'spring') {
@@ -338,6 +399,7 @@ const REACHES = [
     showScene();
   }
 
+  /** @type {Record<string, string>} */
   const keys = {
     a: 'left',
     ArrowLeft: 'left',
@@ -374,21 +436,23 @@ const REACHES = [
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && mode !== 'title') setPaused(true);
   });
-  document.querySelectorAll('[data-control]').forEach((b) => {
+  for (const b of document.querySelectorAll('[data-control]')) {
+    if (!(b instanceof HTMLElement)) continue;
     b.addEventListener('pointerdown', (e) => {
       if (mode === 'title' || paused || !sceneBox.hidden) return;
       e.preventDefault();
       if (mode === 'demo') mode = 'swim';
       b.setPointerCapture(e.pointerId);
-      pointers.set(e.pointerId, b.dataset.control);
+      pointers.set(e.pointerId, b.dataset.control ?? '');
       paintControls();
     });
     for (const event of ['pointerup', 'pointercancel', 'lostpointercapture'])
       b.addEventListener(event, (e) => {
-        pointers.delete(e.pointerId);
+        if (e instanceof PointerEvent) pointers.delete(e.pointerId);
         paintControls();
       });
-  });
+  }
+  /** @param {PointerEvent} e */
   function setAim(e) {
     const r = canvas.getBoundingClientRect();
     const cx = ((e.clientX - r.left) / r.width) * W,
@@ -420,7 +484,7 @@ const REACHES = [
   });
   for (const event of ['pointerup', 'pointercancel'])
     canvas.addEventListener(event, (e) => {
-      if (e.pointerId !== aim.id) return;
+      if (!(e instanceof PointerEvent) || e.pointerId !== aim.id) return;
       aim.held = false;
       aim.id = null;
       const tap =
@@ -437,6 +501,7 @@ const REACHES = [
     });
 
   // Steering towards the touch point: the same turn and stroke inputs the keys give, nothing else.
+  /** @returns {[number, boolean]} turn and stroke */
   function aimControls() {
     if (!aim.held) {
       aim.x = aim.dx;
@@ -461,8 +526,16 @@ const REACHES = [
 
   const heat = document.createElement('canvas');
   heat.width = heat.height = 48;
-  const hctx = heat.getContext('2d'),
+  const hctx = context2d(heat),
     pixels = hctx.createImageData(48, 48);
+  /**
+   * @param {string} text
+   * @param {number} x
+   * @param {number} y
+   * @param {number} px
+   * @param {string} fill
+   * @param {string} [stroke]
+   */
   function label(text, x, y, px, fill, stroke) {
     ctx.font = `bold ${px}px system-ui`;
     ctx.textAlign = 'center';
@@ -476,6 +549,14 @@ const REACHES = [
     ctx.fillText(text, x, y);
     drawnTexts.push({ text, px });
   }
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} heading
+   * @param {number} width
+   * @param {number} time
+   * @param {boolean} stroking
+   */
   function drawFish(x, y, heading, width, time, stroking) {
     ctx.save();
     ctx.translate(x, y);
@@ -569,6 +650,7 @@ const REACHES = [
     banner.textContent = j[12] === 2 ? 'Swept back' : 'Reach cleared';
     banner.className = j[12] === 2 ? 'swept' : '';
   }
+  /** @param {HTMLImageElement} img */
   function drawCover(img) {
     const k = Math.max(W / img.naturalWidth, H / img.naturalHeight),
       w = img.naturalWidth * k,
@@ -597,7 +679,7 @@ const REACHES = [
       ctx.strokeRect(OX + 0.5, OY + 0.5, S - 1, S - 1);
     }
     const range = Math.max(1, s[11]) * 0.5;
-    if (mode !== 'title' && $('vorticity').checked) {
+    if (mode !== 'title' && $as('vorticity', HTMLInputElement).checked) {
       for (let j = 0; j < 48; j++)
         for (let i = 0; i < 48; i++) {
           const w = f[(j * 48 + i) * 3],
@@ -632,7 +714,7 @@ const REACHES = [
           );
       }
     }
-    if (mode !== 'title' && $('arrows').checked) {
+    if (mode !== 'title' && $as('arrows', HTMLInputElement).checked) {
       ctx.strokeStyle = '#d7eae4b0';
       ctx.lineWidth = dpr;
       for (let j = 2; j < 48; j += 3)
@@ -674,7 +756,7 @@ const REACHES = [
       ctx.arc(PX(aim.x), PY(aim.y), 10 * dpr, 0, Math.PI * 2);
       ctx.stroke();
     }
-    if (mode !== 'title' && $('disc').checked) {
+    if (mode !== 'title' && $as('disc', HTMLInputElement).checked) {
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 1.5 * dpr;
       ctx.beginPath();
@@ -765,6 +847,7 @@ const REACHES = [
     },
   });
   // Shared playability-gate hook (read-only): where things are on the canvas, in canvas pixels, and what the first goal is.
+  /** @param {Element} el */
   const centreOf = (el) => {
     const r = el.getBoundingClientRect(),
       c = canvas.getBoundingClientRect();
@@ -801,11 +884,15 @@ const REACHES = [
       if (mode === 'title') return centreOf($('upstream'));
       if (mode !== 'journey') return centreOf($('story'));
       const j = journeyState();
-      if (j[11] >= 0) return centreOf($('scene-options').firstChild);
+      if (j[11] >= 0) {
+        const first = $('scene-options').firstElementChild;
+        return first ? centreOf(first) : null;
+      }
       if (paused) return { x: W / 2, y: H / 2 };
       return { x: PX(j[16]), y: PY(j[17]) };
     },
   };
+  /** @param {number} now */
   function frame(now) {
     const delta = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;

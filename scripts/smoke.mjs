@@ -9,12 +9,13 @@ import os from 'node:os';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
+/** @type {import('playwright').BrowserType | undefined} */
 let chromium;
 for (const name of [
   process.env.PLAYWRIGHT_MODULE,
   'playwright',
   path.resolve('../exam-coach/node_modules/playwright'),
-].filter(Boolean)) {
+].filter((name) => name !== undefined)) {
   try {
     ({ chromium } = require(name));
     break;
@@ -26,6 +27,7 @@ const libs = path.join(os.homedir(), '.local/lib/chromium-deps/usr/lib/x86_64-li
 if (existsSync(libs))
   process.env.LD_LIBRARY_PATH =
     libs + (process.env.LD_LIBRARY_PATH ? `:${process.env.LD_LIBRARY_PATH}` : '');
+/** @type {Record<string, string>} */
 const types = {
   '.html': 'text/html',
   '.js': 'text/javascript',
@@ -36,7 +38,7 @@ const types = {
 };
 const server = createServer(async (req, res) => {
   try {
-    const pathname = new URL(req.url, 'http://localhost').pathname;
+    const pathname = new URL(req.url ?? '/', 'http://localhost').pathname;
     assert(pathname.startsWith('/swim/'));
     const file = path.resolve('dist', decodeURIComponent(pathname.slice(6)) || 'index.html');
     assert(file.startsWith(path.resolve('dist') + path.sep));
@@ -47,29 +49,55 @@ const server = createServer(async (req, res) => {
     res.end();
   }
 });
-await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-const url = `http://127.0.0.1:${server.address().port}/swim/`;
+await new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(undefined)));
+const address = server.address();
+if (!address || typeof address === 'string') throw new Error('the server has no port');
+const url = `http://127.0.0.1:${address.port}/swim/`;
+/** @type {string[]} */
 const checks = [],
+  /** @type {string[]} */
   errors = [],
+  /** @type {string[]} */
   external = [];
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
 const images = 'docs/images';
 await mkdir(images, { recursive: true });
 await mkdir('out', { recursive: true });
-const inspect = (page) => page.evaluate(() => window.swimmerView);
+/** @param {import('playwright').Page} page */
+const inspect = async (page) => {
+  const view = await page.evaluate(() => window.swimmerView);
+  if (!view) throw new Error('the page has no swimmerView yet');
+  return view;
+};
+/**
+ * @param {import('playwright').Page} page
+ * @param {number} time
+ */
 const waitTime = (page, time) =>
-  page.waitForFunction((t) => window.swimmerView.state[9] >= t, time);
+  page.waitForFunction((t) => (window.swimmerView?.state[9] ?? -1) >= t, time);
+/** @param {import('playwright').Page} page */
 const track = (page) => {
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('request', (req) => {
     if (new URL(req.url()).origin !== new URL(url).origin) external.push(req.url());
   });
 };
+/** @param {import('playwright').Locator} locator */
+const boxOf = async (locator) => {
+  const box = await locator.boundingBox();
+  if (!box) throw new Error('the element is not visible');
+  return box;
+};
+/**
+ * @param {import('playwright').Page} page
+ * @param {string} name
+ */
 const shot = (page, name) =>
   page.screenshot({ path: `${images}/${name}.jpg`, type: 'jpeg', quality: 86, fullPage: true });
 try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   track(page);
+  /** @type {string[]} */
   const responseErrors = [];
   page.on('response', (r) => {
     if (r.status() >= 400) responseErrors.push(`${r.status()} ${r.url()}`);
@@ -138,11 +166,16 @@ try {
   await page.locator('#upstream').click();
   await page.evaluate(() => {
     let resting = false;
+    /**
+     * @param {string} key
+     * @param {boolean} down
+     */
     const press = (key, down) =>
       window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { key }));
     window.__pilot = setInterval(() => {
-      const v = window.swimmerView,
-        j = v.journey;
+      const v = window.swimmerView;
+      if (!v) return;
+      const j = v.journey;
       if (j.scene || v.paused) {
         for (const k of ['a', 'd', 'w']) press(k, false);
         return;
@@ -160,18 +193,21 @@ try {
   });
   const seen = [],
     scene = async () => {
-      await page.waitForFunction(() => window.swimmerView.journey.scene, null, { timeout: 120000 });
+      await page.waitForFunction(() => window.swimmerView?.journey.scene, null, {
+        timeout: 120000,
+      });
       return inspect(page);
     };
+  /** @param {number} option */
   const choose = async (option) => {
     await page.locator(`#scene-options button[data-option="${option}"]`).click();
     await page.waitForFunction(
-      () => !window.swimmerView.journey.scene || window.swimmerView.journey.scene === 'taste',
+      () => !window.swimmerView?.journey.scene || window.swimmerView?.journey.scene === 'taste',
     );
   };
   s = await scene();
   assert.equal(s.journey.scene, 'outlet');
-  assert.match(s.journey.sceneText, /Colder than your fins\./);
+  assert.match(s.journey.sceneText ?? '', /Colder than your fins\./);
   seen.push('outlet');
   assert.equal(await page.locator('#scene-options button').count(), 1);
   await choose(0);
@@ -188,16 +224,16 @@ try {
   await choose(0);
   s = await scene();
   assert.equal(s.journey.scene, 'eddy');
-  assert.match(s.journey.sceneText, /shaking from the pipe/);
+  assert.match(s.journey.sceneText ?? '', /shaking from the pipe/);
   seen.push('eddy');
   await choose(0);
   s = await scene();
   assert.equal(s.journey.scene, 'warm');
   seen.push('warm');
   await page.locator('#scene-options button').click();
-  await page.waitForFunction(() => window.swimmerView.journey.scene === 'taste');
+  await page.waitForFunction(() => window.swimmerView?.journey.scene === 'taste');
   s = await inspect(page);
-  assert.match(s.journey.sceneText, /never warm/);
+  assert.match(s.journey.sceneText ?? '', /never warm/);
   seen.push('taste');
   await choose(0);
   s = await scene();
@@ -219,19 +255,19 @@ try {
   assert(
     (await page.locator('#scene.heavy').isVisible()) && (await page.locator('#banner').isHidden()),
   );
-  assert.match(s.journey.sceneText, /left the reeds early/);
+  assert.match(s.journey.sceneText ?? '', /left the reeds early/);
   await choose(0);
   s = await scene();
   assert.equal(s.journey.scene, 'spring');
   seen.push('spring');
   assert.equal(s.journey.ending, 1);
-  assert.match(s.journey.sceneText, /never looked back/);
+  assert.match(s.journey.sceneText ?? '', /never looked back/);
   assert(
     (await page.locator('#scene.ending').isVisible()) && (await page.locator('#banner').isHidden()),
   );
   await shot(page, 'spring');
   assert(s.journey.heavy.length === 2 && s.journey.heavy.every((h) => h.banner === 0));
-  await page.evaluate(() => clearInterval(window.__pilot));
+  await page.evaluate(() => clearInterval(window.__pilot ?? 0));
   checks.push(
     `Upstream played through in ${s.journey.time.toFixed(1)} s on the clock with ${s.journey.sweeps} sweeps: ${seen.join(' > ')}; heavy scenes reeds/surge with no banner`,
   );
@@ -251,9 +287,13 @@ try {
   track(touch);
   await touch.goto(url);
   await touch.locator('#start').tap();
-  const stroke = await touch.locator('[data-control=stroke]').boundingBox();
-  const left = await touch.locator('[data-control=left]').boundingBox();
+  const stroke = await boxOf(touch.locator('[data-control=stroke]'));
+  const left = await boxOf(touch.locator('[data-control=left]'));
   const cdp = await mobile.newCDPSession(touch);
+  /**
+   * @param {{ x: number, y: number, width: number, height: number }} box
+   * @param {number} id
+   */
   const point = (box, id) => ({
     x: box.x + box.width / 2,
     y: box.y + box.height / 2,
@@ -274,7 +314,7 @@ try {
   s = await inspect(touch);
   await waitTime(touch, s.state[9] + 0.5);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await touch.waitForFunction(() => window.swimmerView.held.length === 0);
+  await touch.waitForFunction(() => window.swimmerView?.held.length === 0);
   await touch.locator('#pause').tap();
   s = await inspect(touch);
   assert(s.state[3] > 0.05 && s.state[2] > 0.5 && s.held.length === 0);
@@ -283,13 +323,16 @@ try {
   checks.push('390 px: simultaneous real touch strokes and steering; no horizontal overflow');
   await touch.goto(url);
   await touch.locator('#upstream').tap();
-  await touch.waitForFunction(() => window.swimmerView.journey.scene === 'outlet');
+  await touch.waitForFunction(() => window.swimmerView?.journey.scene === 'outlet');
   const sizes390 = await touch.evaluate(() =>
-    [...document.querySelectorAll('#scene p, #scene-options button')].map((e) => [
-      parseFloat(getComputedStyle(e).fontSize),
-      e.getBoundingClientRect().height,
-      e.tagName,
-    ]),
+    [...document.querySelectorAll('#scene p, #scene-options button')].map(
+      (e) =>
+        /** @type {[number, number, string]} */ ([
+          parseFloat(getComputedStyle(e).fontSize),
+          e.getBoundingClientRect().height,
+          e.tagName,
+        ]),
+    ),
   );
   assert(
     sizes390.every(([font]) => font >= 14) &&
@@ -297,16 +340,18 @@ try {
   );
   assert(await touch.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await touch.locator('#scene-options button').tap();
-  await touch.waitForFunction(() => !window.swimmerView.journey.scene);
+  await touch.waitForFunction(() => !window.swimmerView?.journey.scene);
   checks.push('390 px Upstream: scene text >= 14 px, buttons >= 44 px, no horizontal overflow');
   await mobile.close();
 
   // iPhone-sized screens, touch only: every visible word >= 14 CSS px, every target >= 44 x 44, the water > half the screen,
   // and a tap on the water (no keys, no buttons) swims Copperfin through the first reach of Upstream.
-  for (const [orient, viewport] of [
+  /** @type {[string, { width: number, height: number }][]} */
+  const phones = [
     ['portrait', { width: 375, height: 812 }],
     ['landscape', { width: 812, height: 375 }],
-  ]) {
+  ];
+  for (const [orient, viewport] of phones) {
     const phone = await browser.newContext({
       viewport,
       isMobile: true,
@@ -319,6 +364,8 @@ try {
     await p.waitForFunction(() => window.__tmGate);
     const measure = () =>
       p.evaluate(() => {
+        /** @param {Element} el */
+        /** @param {Element} el */
         const seen = (el) => {
           const r = el.getBoundingClientRect(),
             cs = getComputedStyle(el);
@@ -339,13 +386,13 @@ try {
         for (let n = walk.nextNode(); n; n = walk.nextNode()) {
           const el = n.parentElement;
           if (
-            n.textContent.trim() &&
+            n.textContent?.trim() &&
             el &&
             !['SCRIPT', 'STYLE'].includes(el.tagName) &&
             seen(el) &&
             parseFloat(getComputedStyle(el).fontSize) < 14
           )
-            small.push(n.textContent.trim().slice(0, 30));
+            small.push((n.textContent ?? '').trim().slice(0, 30));
         }
         for (const el of document.querySelectorAll(
           'button, a[href], input, summary, [role=button]',
@@ -353,9 +400,12 @@ try {
           if (seen(el)) {
             const r = el.getBoundingClientRect();
             if (Math.min(r.width, r.height) < 44)
-              tiny.push(el.id || el.textContent.trim().slice(0, 20));
+              tiny.push(el.id || (el.textContent ?? '').trim().slice(0, 20));
           }
-        const c = document.getElementById('water').getBoundingClientRect();
+        const water = document.getElementById('water'),
+          gate = window.__tmGate;
+        if (!water || !gate) throw new Error('missing #water or __tmGate');
+        const c = water.getBoundingClientRect();
         return {
           small,
           tiny,
@@ -363,9 +413,7 @@ try {
             (Math.min(c.width, innerWidth) * Math.min(c.height, innerHeight)) /
             (innerWidth * innerHeight),
           overflow: document.documentElement.scrollWidth > innerWidth,
-          canvasText: window.__tmGate
-            .texts()
-            .map((t) => (t.px / window.__tmGate.logical.h) * c.height),
+          canvasText: gate.texts().map((t) => (t.px / gate.logical.h) * c.height),
         };
       });
     let m = await measure();
@@ -373,27 +421,31 @@ try {
     assert.deepEqual(m.tiny, []);
     assert(m.area >= 0.5 && !m.overflow, JSON.stringify(m));
     const tapHint = async () => {
-      const h = await p.evaluate(() => window.__tmGate.hint());
+      const h = await p.evaluate(() => window.__tmGate?.hint());
+      if (!h) throw new Error('the gate gives no hint');
       const c = await p.evaluate((h) => {
-        const r = document.getElementById('water').getBoundingClientRect(),
-          L = window.__tmGate.logical;
+        const water = document.getElementById('water'),
+          gate = window.__tmGate;
+        if (!water || !gate) throw new Error('missing #water or __tmGate');
+        const r = water.getBoundingClientRect(),
+          L = gate.logical;
         return { x: r.left + (h.x / L.w) * r.width, y: r.top + (h.y / L.h) * r.height };
       }, h);
       await p.touchscreen.tap(c.x, c.y);
     };
     await tapHint();
-    await p.waitForFunction(() => window.__tmGate.scene() === 'scene:outlet');
+    await p.waitForFunction(() => window.__tmGate?.scene() === 'scene:outlet');
     await tapHint();
-    await p.waitForFunction(() => window.__tmGate.scene() === 'play');
+    await p.waitForFunction(() => window.__tmGate?.scene() === 'play');
     m = await measure();
     assert.deepEqual(m.small, []);
     assert.deepEqual(m.tiny, []);
     assert(!m.overflow);
     const x0 = (await inspect(p)).state[0];
     await tapHint();
-    await p.waitForFunction(() => window.swimmerView.aim);
+    await p.waitForFunction(() => window.swimmerView?.aim);
     await p.waitForFunction(
-      () => window.__tmGate.goal() || window.swimmerView.journey.scene,
+      () => window.__tmGate?.goal() || window.swimmerView?.journey.scene,
       null,
       { timeout: 30000 },
     );
@@ -405,11 +457,11 @@ try {
       JSON.stringify(m.canvasText),
     );
     await p.locator('#scene-options button').first().tap();
-    await p.waitForFunction(() => window.__tmGate.scene() === 'play');
+    await p.waitForFunction(() => window.__tmGate?.scene() === 'play');
     await p.locator('#reset').tap();
     assert.equal((await inspect(p)).journey.reach, 1); // a first tap only arms the restart
     await p.waitForFunction(
-      () => document.getElementById('reset').textContent === 'Tap again to restart',
+      () => document.getElementById('reset')?.textContent === 'Tap again to restart',
     );
     await shot(p, `phone-${orient}`);
     await phone.close();
@@ -420,8 +472,10 @@ try {
 
   // M2 "Behind a post": the C wake in the browser. The hook advances the same C steps the page loop runs.
   const wakeUrl = `${url}wake.html`;
+  /** @param {import('playwright').Page} p */
   const pageText = (p) =>
     p.evaluate(() => {
+      /** @param {Element} el */
       const seen = (el) => {
         const r = el.getBoundingClientRect(),
           cs = getComputedStyle(el);
@@ -439,30 +493,43 @@ try {
       for (let n = walk.nextNode(); n; n = walk.nextNode()) {
         const el = n.parentElement;
         if (
-          n.textContent.trim() &&
+          n.textContent?.trim() &&
           el &&
           !['SCRIPT', 'STYLE'].includes(el.tagName) &&
           seen(el) &&
           parseFloat(getComputedStyle(el).fontSize) < 14
         )
-          small.push(n.textContent.trim().slice(0, 30));
+          small.push((n.textContent ?? '').trim().slice(0, 30));
       }
       for (const el of document.querySelectorAll('button, a[href], input, summary, [role=button]'))
         if (seen(el)) {
           const r = el.getBoundingClientRect();
           if (Math.min(r.width, r.height) < 44)
-            tiny.push(el.id || el.textContent.trim().slice(0, 20));
+            tiny.push(el.id || (el.textContent ?? '').trim().slice(0, 20));
         }
       return { small, tiny, overflow: document.documentElement.scrollWidth > innerWidth };
     });
+  /**
+   * @param {import('playwright').Page} p
+   * @param {number} t
+   */
   const runWake = (p, t) =>
     p.evaluate((t) => {
-      while (window.wakeView.state().t < t) window.wakeView.advance(30);
-      return window.wakeView.state();
+      const view = window.wakeView;
+      if (!view) throw new Error('the page has no wakeView yet');
+      while (view.state().t < t) view.advance(30);
+      return view.state();
     }, t);
+  /** @param {import('playwright').Page} p */
+  const wakeState = async (p) => {
+    const state = await p.evaluate(() => window.wakeView?.state());
+    if (!state) throw new Error('the page has no wakeView yet');
+    return state;
+  };
   {
     const p = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     track(p);
+    /** @type {string[]} */
     const responses = [];
     p.on('response', (r) => {
       if (r.status() >= 400) responses.push(`${r.status()} ${r.url()}`);
@@ -471,19 +538,19 @@ try {
     await p.locator('a[href="wake.html"]').click();
     await p.waitForFunction(() => window.wakeView);
     assert.deepEqual(responses, []);
-    const t0 = await p.evaluate(() => window.wakeView.state().t);
+    const t0 = (await wakeState(p)).t;
     await p.waitForTimeout(700);
-    assert(
-      (await p.evaluate(() => window.wakeView.state().t)) > t0,
-      'the page loop advances the C wake by itself',
-    );
+    assert((await wakeState(p)).t > t0, 'the page loop advances the C wake by itself');
     let w = await runWake(p, 60);
     assert(
       w.periods >= 2 && w.st >= 0.16 && w.st <= 0.22 && w.cdMean > 1.3 && w.cdMean < 1.9,
       JSON.stringify(w),
     );
     await p.waitForTimeout(200);
-    assert.match(await p.locator('#wk-compare').textContent(), /inside the band 0\.16–0\.22/);
+    assert.match(
+      (await p.locator('#wk-compare').textContent()) ?? '',
+      /inside the band 0\.16–0\.22/,
+    );
     assert(await p.locator('#wk-mark-st').isVisible());
     let m = await pageText(p);
     assert.deepEqual(m.small, []);
@@ -497,19 +564,19 @@ try {
     w = await runWake(p, 50);
     await p.waitForTimeout(200);
     assert(w.re === 30 && w.periods === 0 && w.clAmp < 0.01 && w.lr > 0.5, JSON.stringify(w));
-    assert.match(await p.locator('#wk-regime').textContent(), /STEADY/);
+    assert.match((await p.locator('#wk-regime').textContent()) ?? '', /STEADY/);
     await shot(p, 'wake-30');
     checks.push(
       `wake.html Re 30: no shedding (C_L amplitude ${w.clAmp.toFixed(4)}), closed wake ${w.lr.toFixed(2)} D`,
     );
     await p.locator('#wk-re').fill('100');
-    w = await p.evaluate(() => window.wakeView.state());
+    w = await wakeState(p);
     assert(w.re === 100 && w.t < 1);
     checks.push('wake.html: the Re slider restarts the C wake at the chosen Re');
     await p.locator('#wk-pause').click();
-    const frozen = await p.evaluate(() => window.wakeView.state().t);
+    const frozen = (await wakeState(p)).t;
     await p.waitForTimeout(400);
-    assert.equal(await p.evaluate(() => window.wakeView.state().t), frozen);
+    assert.equal((await wakeState(p)).t, frozen);
     checks.push('wake.html: pause stops the C steps');
     await p.close();
     for (const viewport of [
@@ -526,10 +593,12 @@ try {
       assert(!m.overflow, `${viewport.width}: horizontal overflow`);
       await q.close();
     }
-    for (const [name, viewport] of [
+    /** @type {[string, { width: number, height: number }][]} */
+    const wakePhones = [
       ['portrait', { width: 390, height: 844 }],
       ['landscape', { width: 844, height: 390 }],
-    ]) {
+    ];
+    for (const [name, viewport] of wakePhones) {
       const ctx = await browser.newContext({
         viewport,
         isMobile: true,

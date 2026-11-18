@@ -1,9 +1,32 @@
 // Behind a post (M2). Every number on this page is read from the C wake (src/wake.c via src/wake_web.c).
 (async () => {
-  const $ = (id) => document.getElementById(id);
+  /** @param {string} id */
+  const $ = (id) => {
+    const element = document.getElementById(id);
+    if (!element) throw new Error(`missing #${id}`);
+    return element;
+  };
+  /**
+   * @template {HTMLElement} T
+   * @param {string} id
+   * @param {{ new (): T, name: string }} type
+   * @returns {T}
+   */
+  const $as = (id, type) => {
+    const element = $(id);
+    if (!(element instanceof type)) throw new Error(`#${id} is not a ${type.name}`);
+    return element;
+  };
+  /** @param {HTMLCanvasElement} canvas */
+  const context2d = (canvas) => {
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('no 2D canvas context');
+    return context;
+  };
   const CELLS = 6,
     BUDGET_MS = 10,
     MAX_STEPS = 12;
+  /** @type {SwimmerModule} */
   let mod;
   try {
     mod = await createSwimmer();
@@ -12,7 +35,9 @@
     console.error(e);
     return;
   }
+  /** @type {(ptr: number, n: number) => Float32Array} */
   const floats = (ptr, n) => mod.HEAPF32.subarray(ptr / 4, ptr / 4 + n);
+  /** @returns {WakeReadout} */
   const state = () => {
     const s = floats(mod._wv_state(), 15);
     return {
@@ -33,12 +58,14 @@
       sweeps: s[14],
     };
   };
+  /** @param {number} re */
   const roshko = (re) => 0.212 * (1 - 21.2 / re);
 
   let paused = false;
+  /** @param {number} re */
   function start(re) {
-    $('wk-re').value = re;
-    $('wk-re-out').textContent = re;
+    $as('wk-re', HTMLInputElement).value = String(re);
+    $('wk-re-out').textContent = String(re);
     if (mod._wv_init(re, CELLS)) {
       $('wk-regime').textContent = 'OUT OF MEMORY';
       return;
@@ -47,23 +74,24 @@
   }
   start(150);
   $('wk-re').addEventListener('input', () => {
-    $('wk-re-out').textContent = $('wk-re').value;
+    $('wk-re-out').textContent = $as('wk-re', HTMLInputElement).value;
   });
-  $('wk-re').addEventListener('change', () => start(+$('wk-re').value));
+  $('wk-re').addEventListener('change', () => start(+$as('wk-re', HTMLInputElement).value));
   $('wk-pause').onclick = () => {
     paused = !paused;
     $('wk-pause').textContent = paused ? 'Resume' : 'Pause';
   };
-  $('wk-restart').onclick = () => start(+$('wk-re').value);
+  $('wk-restart').onclick = () => start(+$as('wk-re', HTMLInputElement).value);
   for (const re of [30, 100, 200]) $(`wk-preset-${re}`).onclick = () => start(re);
 
   // ------------------------------------------------------------- drawing
-  const water = $('wk-water'),
-    wctx = water.getContext('2d');
-  const chart = $('wk-forces'),
-    cctx = chart.getContext('2d');
+  const water = $as('wk-water', HTMLCanvasElement),
+    wctx = context2d(water);
+  const chart = $as('wk-forces', HTMLCanvasElement),
+    cctx = context2d(chart);
   const off = document.createElement('canvas'),
-    octx = off.getContext('2d');
+    octx = context2d(off);
+  /** @param {HTMLCanvasElement} canvas */
   function fit(canvas) {
     const r = canvas.getBoundingClientRect(),
       dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -75,6 +103,7 @@
     }
     return dpr;
   }
+  /** @param {number} w */
   function colour(w) {
     const t = Math.tanh(w / 1.5),
       a = Math.abs(t);
@@ -83,6 +112,7 @@
       from = [18, 51, 62];
     return from.map((b, k) => b + (to[k] - b) * a);
   }
+  /** @param {WakeReadout} s */
   function drawWater(s) {
     fit(water);
     const nx = s.nx,
@@ -130,8 +160,10 @@
       right = 10 * dpr,
       top = 8 * dpr,
       bottom = 26 * dpr;
-    const X = (k) => left + ((W - left - right) * k) / 399,
-      Y = (v) => top + ((H - top - bottom) * (hi - v)) / (hi - lo);
+    /** @param {number} k */
+    const X = (k) => left + ((W - left - right) * k) / 399;
+    /** @param {number} v */
+    const Y = (v) => top + ((H - top - bottom) * (hi - v)) / (hi - lo);
     cctx.font = `${14 * dpr}px system-ui, sans-serif`;
     cctx.fillStyle = '#a4bbb9';
     cctx.textAlign = 'right';
@@ -148,10 +180,12 @@
     cctx.textAlign = 'left';
     cctx.textBaseline = 'alphabetic';
     cctx.fillText(`${(n * step).toFixed(0)} D/U shown`, left, H - 6 * dpr);
-    for (const [offset, col] of [
+    /** @type {[number, string][]} */
+    const lines = [
       [400, '#ff8a65'],
       [0, '#9bc9ff'],
-    ]) {
+    ];
+    for (const [offset, col] of lines) {
       cctx.strokeStyle = col;
       cctx.lineWidth = 2 * dpr;
       cctx.beginPath();
@@ -163,6 +197,7 @@
       cctx.stroke();
     }
   }
+  /** @param {WakeReadout} s */
   function readouts(s) {
     $('wk-clock').textContent = `t = ${s.t.toFixed(1)} D/U · Re ${s.re.toFixed(0)}`;
     const measuring = s.t >= 20,
@@ -178,6 +213,7 @@
     $('wk-cd').textContent = measuring ? s.cdMean.toFixed(2) : '—';
     $('wk-cl').textContent = measuring ? s.clAmp.toFixed(3) : '—';
     $('wk-lr').textContent = s.lr > 0 ? s.lr.toFixed(2) : '—';
+    /** @param {number} v */
     const pos = (v) => `${Math.max(0, Math.min(100, ((v - 0.1) / 0.16) * 100))}%`;
     $('wk-mark-fit').style.left = pos(roshko(s.re));
     const mark = $('wk-mark-st');
@@ -194,6 +230,7 @@
   }
 
   // ------------------------------------------------------------- loop and test hook
+  /** @param {number} steps */
   function advance(steps) {
     mod._wv_step(steps);
   }
