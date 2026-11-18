@@ -88,7 +88,7 @@ theory-figs: theory_figs
 
 # Fails when a statement of docs/theory has no figure, a link is broken, or a referenced function or test is gone.
 theory-check:
-	python3 scripts/theory-check.py
+	python3 scripts/theory_check.py
 
 clean:
 	rm -f current-swimmer test_fluid test_gif test_view test_story story_bench theory_figs test_wake
@@ -105,13 +105,13 @@ TM_UNIT_BINS := test_fluid test_gif test_view test_story story_bench test_wake c
 
 .PHONY: test-unit check test-trace test-perf test-e2e tm-ctest tm-deps test-tm-unit test-tm-trace test-tm-perf test-tm-e2e
 test-unit:
-	$(TM_TEST_PYTHON) scripts/local-test.py unit
+	$(TM_TEST_PYTHON) scripts/local_test.py unit
 
 check:
-	$(TM_TEST_PYTHON) scripts/local-test.py all
+	$(TM_TEST_PYTHON) scripts/local_test.py all
 
 test-trace test-perf test-e2e:
-	$(TM_TEST_PYTHON) scripts/local-test.py $(@:test-%=%)
+	$(TM_TEST_PYTHON) scripts/local_test.py $(@:test-%=%)
 
 tm-ctest:
 	mkdir -p test-results
