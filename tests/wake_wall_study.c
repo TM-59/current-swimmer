@@ -8,7 +8,7 @@ int main(void)
     const WakeSetup setup = {8, 100.0f, WAKE_LX, WAKE_LY, WAKE_CX, 0.0f, 1};
     Wake w;
     if (wake_init_setup(&w, &setup)) {
-        fputs("wake_init_setup failed\n", stderr);
+        (void)fputs("wake_init_setup failed\n", stderr);
         return 1;
     }
     float dt = wake_dt(&w);
@@ -16,7 +16,7 @@ int main(void)
     float *cl = malloc((size_t)steps * sizeof *cl);
     float *cd = malloc((size_t)steps * sizeof *cd);
     if (!cl || !cd) {
-        fputs("allocation failed\n", stderr);
+        (void)fputs("allocation failed\n", stderr);
         free(cl);
         free(cd);
         wake_free(&w);
@@ -27,14 +27,14 @@ int main(void)
         cl[i] = wake_lift_coefficient(&w);
         cd[i] = wake_drag_coefficient(&w);
     }
-    WakeStats s = wake_stats(cl, cd, steps, steps / 2, dt);
-    printf("sharp wall: St %.6f C_D %.6f C_L amplitude %.6f periods %d\n",
-           s.strouhal, s.cd_mean, s.cl_amp, s.periods);
+    WakeStats s = wake_stats(cl, cd, (WakeWindow){steps, steps / 2, dt});
+    printf("sharp wall: St %.6f C_D %.6f C_L amplitude %.6f periods %d\n", s.strouhal, s.cd_mean,
+           s.cl_amp, s.periods);
     free(cl);
     free(cd);
     wake_free(&w);
     if (s.periods < 3) {
-        fputs("insufficient measured periods\n", stderr);
+        (void)fputs("insufficient measured periods\n", stderr);
         return 1;
     }
     return 0;

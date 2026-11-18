@@ -1,0 +1,37 @@
+# Style tools for the C code, the Python scripts and the shell script under scripts/, pinned by uv.lock.
+[project]
+name = "current-swimmer-style"
+version = "0.1.0"
+requires-python = ">=3.14"
+
+[dependency-groups]
+dev = ["clang-format==23.1.5", "clang-tidy==23.1.4", "ruff==0.17.5", "mypy==2.4.1", "shellcheck-py==0.11.0.1", "shfmt-py==4.2.0"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["ALL"]
+# Only rules the tool itself declares incompatible are left out; no code is excluded.
+ignore = [
+  # D203 and D211 are mutually exclusive (Ruff warns); keep D211 (no blank line before a class docstring).
+  "D203",
+  # D212 and D213 are mutually exclusive (Ruff warns); keep D212 (summary on the first line).
+  "D213",
+  # Conflicts with `ruff format` (Ruff documents it as unsafe to combine with the formatter).
+  "COM812",
+  # S603 and S607 contradict each other for programs without a fixed location: S607 (kept) wants an
+  # absolute path, which for `git` and the Python of the common runner is only known at run time
+  # (shutil.which / sys.executable), and S603 flags every argument list that is not literal.
+  # Keep S607; leave out S603.
+  "S603",
+]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+files = ["scripts"]

@@ -1,0 +1,24 @@
+# The mainstream bug-finding families in full, plus the widely used readability checks.
+# The size-heavy style checks (magic numbers, identifier length, math parentheses, one
+# declaration per line, literal suffix case) are not part of the chosen set.
+# One check inside the set cannot hold in this C: the Annex K check of clang-analyzer asks
+# for fprintf_s and friends, which glibc (the C library here and on Debian) does not provide.
+Checks: >-
+  -*,
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  performance-*,
+  portability-*,
+  readability-avoid-const-params-in-decls,
+  readability-braces-around-statements,
+  readability-duplicate-include,
+  readability-else-after-return,
+  readability-inconsistent-declaration-parameter-name,
+  readability-misleading-indentation,
+  readability-non-const-parameter,
+  readability-redundant-control-flow,
+  readability-redundant-declaration,
+  readability-simplify-boolean-expr
+WarningsAsErrors: "*"

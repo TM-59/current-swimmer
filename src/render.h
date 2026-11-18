@@ -17,6 +17,10 @@ size_t render_frame(const Fluid *f, const Swimmer *s, char *buf, size_t cap);
 int render_field_svg(const Fluid *f, const Swimmer *s, const char *path);
 
 /* Write the vorticity of the cylinder wake (M2) as a self-contained SVG, axes in diameters. */
-int render_wake_svg(const Wake *w, const char *path, const char *title);
+/* Where an SVG figure goes and its title. */
+typedef struct {
+    const char *path, *title;
+} SvgFigure;
+int render_wake_svg(const Wake *w, SvgFigure figure);
 
 #endif

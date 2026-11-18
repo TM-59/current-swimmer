@@ -21,10 +21,10 @@ static void refresh(void)
     state[VIEW_DRAG] = fish.drag;
     state[VIEW_ENERGY] = fluid_kinetic_energy(&water);
     state[VIEW_DIV] = fluid_max_divergence(&water);
-    state[VIEW_TIME] = steps * 0.02f;
+    state[VIEW_TIME] = (float)steps * 0.02f;
     state[VIEW_RADIUS] = fish.radius;
     state[VIEW_VORT] = fluid_max_abs_vorticity(&water);
-    for (int j = 1; j <= VIEW_GRID; j++)
+    for (int j = 1; j <= VIEW_GRID; j++) {
         for (int i = 1; i <= VIEW_GRID; i++) {
             int dst = ((j - 1) * VIEW_GRID + i - 1) * 3;
             int src = j * (VIEW_GRID + 2) + i;
@@ -32,13 +32,16 @@ static void refresh(void)
             field[dst + 1] = water.u[src];
             field[dst + 2] = water.v[src];
         }
+    }
 }
 
 int view_init(void)
 {
     fluid_free(&water);
-    if (fluid_init(&water, VIEW_GRID, 0.0004f)) return 1;
-    swimmer_init(&fish, 0.3f, 0.5f, 0.0f);
+    if (fluid_init(&water, (FluidSpec){VIEW_GRID, 0.0004f})) {
+        return 1;
+    }
+    swimmer_init(&fish, (Vec2f){0.3f, 0.5f}, 0.0f);
     steps = 0;
     refresh();
     return 0;
@@ -46,8 +49,12 @@ int view_init(void)
 
 void view_step(float turn, int stroke)
 {
-    if (!water.u) return;
-    if (!isfinite(turn)) turn = 0.0f;
+    if (!water.u) {
+        return;
+    }
+    if (!isfinite(turn)) {
+        turn = 0.0f;
+    }
     Controls c = {fmaxf(-1.0f, fminf(1.0f, turn)), stroke != 0};
     swimmer_step(&fish, &water, &c, 0.02f);
     fluid_step(&water, 0.02f);

@@ -2,12 +2,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 if ! command -v emcc >/dev/null 2>&1; then
+  # emcc runs from an installed SDK without its environment script: the SDK's .emscripten
+  # configuration is found next to it.
   sdk="${EMSDK:-$HOME/.local/emsdk}"
-  if [[ ! -f "$sdk/emsdk_env.sh" ]]; then
+  if [[ ! -x "$sdk/upstream/emscripten/emcc" ]]; then
     echo 'Emscripten required: put emcc on PATH, or set EMSDK to an installed SDK.' >&2
     exit 1
   fi
-  source "$sdk/emsdk_env.sh" >/dev/null 2>&1
+  PATH="$sdk/upstream/emscripten:$PATH"
 fi
 mkdir -p dist/assets
 emcc src/fluid.c src/swimmer.c src/view.c src/journey.c src/journey_web.c src/wake.c src/wake_web.c -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror -lm \

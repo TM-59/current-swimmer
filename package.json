@@ -1,6 +1,16 @@
 {
   "name": "current-swimmer",
   "private": true,
-  "scripts": {"smoke": "node scripts/smoke.mjs"},
-  "devDependencies": {"playwright": "1.64.0"}
+  "scripts": {
+    "smoke": "node scripts/smoke.mjs",
+    "fmt": "biome check --write",
+    "lint": "biome ci --error-on-warnings",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.8",
+    "@types/node": "26.6.6",
+    "playwright": "1.64.0",
+    "typescript": "7.0.2"
+  }
 }

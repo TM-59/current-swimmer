@@ -1,9 +1,37 @@
 {
   "reason": "Existing C test programs, story rows, theory contract, route bench and Playwright smoke registered as CTest testcases in an isolated offline snapshot.",
   "suites": [
-    {"kind":"unit","target":"test-tm-unit","framework":"CTest","makefile":"Makefile","junit":"test-results/unit.xml","timeout_seconds":900},
-    {"kind":"trace","target":"test-tm-trace","framework":"CTest","makefile":"Makefile","junit":"test-results/trace.xml","timeout_seconds":900},
-    {"kind":"perf","target":"test-tm-perf","framework":"CTest","makefile":"Makefile","junit":"test-results/perf.xml","timeout_seconds":600},
-    {"kind":"e2e","target":"test-tm-e2e","framework":"CTest","makefile":"Makefile","junit":"test-results/e2e.xml","timeout_seconds":1800}
+    {
+      "kind": "unit",
+      "target": "test-tm-unit",
+      "framework": "CTest",
+      "makefile": "Makefile",
+      "junit": "test-results/unit.xml",
+      "timeout_seconds": 900
+    },
+    {
+      "kind": "trace",
+      "target": "test-tm-trace",
+      "framework": "CTest",
+      "makefile": "Makefile",
+      "junit": "test-results/trace.xml",
+      "timeout_seconds": 900
+    },
+    {
+      "kind": "perf",
+      "target": "test-tm-perf",
+      "framework": "CTest",
+      "makefile": "Makefile",
+      "junit": "test-results/perf.xml",
+      "timeout_seconds": 600
+    },
+    {
+      "kind": "e2e",
+      "target": "test-tm-e2e",
+      "framework": "CTest",
+      "makefile": "Makefile",
+      "junit": "test-results/e2e.xml",
+      "timeout_seconds": 1800
+    }
   ]
 }
