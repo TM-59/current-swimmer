@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2026 TM-59
 """Check docs/theory against the code.
 
