@@ -179,7 +179,7 @@ make test-e2e     # make smoke
 ```
 
 各プログラムを CTest の testcase 1 件として登録し(`tests/ctest/CMakeLists.txt`)、
-共通 runner(`~/project-context/bin/tm-test.py`)が追跡ファイルだけの一時コピーで実行する。
+共通のローカル runner(`tm test`。`TM_TEST_CONTEXT` で見つける)が追跡ファイルだけの一時コピーで実行する。
 結果は git 管理外の `test-results/<run_id>/<kind>.xml` と `test-results/summary.json`。
 必要なもの: `cc`・`cmake`/`ctest`・Python 3.14、smoke には `emcc` と npm の cache にある Playwright。
 置かない種類と理由は `test-inventory.json`。
