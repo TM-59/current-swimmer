@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "lib": [
-      "ES2023",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "moduleDetection": "force",
@@ -13,13 +9,7 @@
     "checkJs": true,
     "strict": true,
     "noEmit": true,
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
-  "include": [
-    "web/*.js",
-    "web/*.d.ts",
-    "scripts/*.mjs"
-  ]
+  "include": ["web/*.js", "web/*.d.ts", "scripts/*.mjs"]
 }

@@ -1,6 +1,4 @@
 {
   "requirements": "docs/requirements.md",
-  "tests": [
-    "tests/ctest/CMakeLists.txt"
-  ]
+  "tests": ["tests/ctest/CMakeLists.txt"]
 }

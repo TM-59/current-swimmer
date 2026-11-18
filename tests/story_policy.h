@@ -20,7 +20,9 @@ static inline uint64_t sub_seed(uint64_t seed, uint64_t index, uint64_t salt)
     return mix64(mix64(seed + salt * 0x632be59bd9b4e019ULL) + (index + 1u) * 0x9e3779b97f4a7c15ULL);
 }
 
-typedef struct { uint64_t s; } Rng;
+typedef struct {
+    uint64_t s;
+} Rng;
 static inline float rng_unit(Rng *r)
 {
     r->s += 0x9e3779b97f4a7c15ULL;
@@ -53,8 +55,9 @@ static inline void policy_init(Policy *p, uint64_t key)
 
 static inline void policy_controls(Policy *p, const Journey *j, float *turn, int *stroke)
 {
-    /* Each reach gets its own stirred stream for the wobble and the rhythm (the same swimmer, the same thresholds), so a
-     * choice changes the reaches it touches and not, by chance, every later one: paths of a choice are compared seed by seed. */
+    /* Each reach gets its own stirred stream for the wobble and the rhythm (the same swimmer, the
+     * same thresholds), so a choice changes the reaches it touches and not, by chance, every later
+     * one: paths of a choice are compared seed by seed. */
     if (j->reach != p->reach) {
         p->reach = j->reach;
         p->rng.s = sub_seed(p->key, (uint64_t)j->reach, 5);
@@ -69,13 +72,19 @@ static inline void policy_controls(Policy *p, const Journey *j, float *turn, int
     float err = remainderf(want + p->wobble - j->fish.heading, 6.2831853f);
     *turn = fmaxf(-1.0f, fminf(1.0f, err * 2.5f));
     float level = j->stamina / j->stamina_max;
-    if (!p->resting && level < p->rest) p->resting = 1;
-    if (p->resting && level >= p->resume) p->resting = 0;
+    if (!p->resting && level < p->rest)
+        p->resting = 1;
+    if (p->resting && level >= p->resume)
+        p->resting = 0;
     p->phase += 0.02f;
-    if (p->phase >= p->burst + p->glide) p->phase = 0.0f;
+    if (p->phase >= p->burst + p->glide)
+        p->phase = 0.0f;
     *stroke = !p->resting && !j->winded && p->phase < p->burst;
-    /* At a hold mark the ring fills only while the swimmer stays close: glide once inside, swim back if pushed out. */
-    if (journey_hold_need(j) > 0.0f && hypotf(tx - j->fish.x, ty - j->fish.y) < journey_hold_radius()) *stroke = 0;
+    /* At a hold mark the ring fills only while the swimmer stays close: glide once inside, swim
+     * back if pushed out. */
+    if (journey_hold_need(j) > 0.0f &&
+        hypotf(tx - j->fish.x, ty - j->fish.y) < journey_hold_radius())
+        *stroke = 0;
 }
 
 #endif

@@ -6,10 +6,10 @@
  * Velocities are in domain-lengths per second. */
 typedef struct {
     int n;
-    float visc;      /* kinematic viscosity [domain^2 / s] */
-    float *u, *v;    /* velocity components */
-    float *u0, *v0;  /* scratch */
-    float *p, *div;  /* pressure and divergence scratch */
+    float visc;     /* kinematic viscosity [domain^2 / s] */
+    float *u, *v;   /* velocity components */
+    float *u0, *v0; /* scratch */
+    float *p, *div; /* pressure and divergence scratch */
 } Fluid;
 
 int fluid_init(Fluid *f, int n, float visc);

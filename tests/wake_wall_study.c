@@ -28,8 +28,8 @@ int main(void)
         cd[i] = wake_drag_coefficient(&w);
     }
     WakeStats s = wake_stats(cl, cd, steps, steps / 2, dt);
-    printf("sharp wall: St %.6f C_D %.6f C_L amplitude %.6f periods %d\n",
-           s.strouhal, s.cd_mean, s.cl_amp, s.periods);
+    printf("sharp wall: St %.6f C_D %.6f C_L amplitude %.6f periods %d\n", s.strouhal, s.cd_mean,
+           s.cl_amp, s.periods);
     free(cl);
     free(cd);
     wake_free(&w);

@@ -7,8 +7,10 @@ typedef struct Gif Gif;
 #define GIF_COLOURS 16
 
 /* delay_cs is the frame delay in hundredths of a second. Returns NULL on failure. */
-Gif *gif_open(const char *path, int width, int height, unsigned char palette[GIF_COLOURS][3], int delay_cs);
-/* pixels: width * height palette indices (0..15). `hold_cs` > 0 overrides the delay of this frame. */
+Gif *gif_open(const char *path, int width, int height, unsigned char palette[GIF_COLOURS][3],
+              int delay_cs);
+/* pixels: width * height palette indices (0..15). `hold_cs` > 0 overrides the delay of this frame.
+ */
 int gif_frame(Gif *g, const unsigned char *pixels, int hold_cs);
 int gif_close(Gif *g);
 

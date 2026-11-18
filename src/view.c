@@ -37,7 +37,8 @@ static void refresh(void)
 int view_init(void)
 {
     fluid_free(&water);
-    if (fluid_init(&water, VIEW_GRID, 0.0004f)) return 1;
+    if (fluid_init(&water, VIEW_GRID, 0.0004f))
+        return 1;
     swimmer_init(&fish, 0.3f, 0.5f, 0.0f);
     steps = 0;
     refresh();
@@ -46,8 +47,10 @@ int view_init(void)
 
 void view_step(float turn, int stroke)
 {
-    if (!water.u) return;
-    if (!isfinite(turn)) turn = 0.0f;
+    if (!water.u)
+        return;
+    if (!isfinite(turn))
+        turn = 0.0f;
     Controls c = {fmaxf(-1.0f, fminf(1.0f, turn)), stroke != 0};
     swimmer_step(&fish, &water, &c, 0.02f);
     fluid_step(&water, 0.02f);
