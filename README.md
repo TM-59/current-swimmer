@@ -163,6 +163,8 @@ make web          # CモデルをWASMへ。配布全体10MB以下を検査
 npm ci            # ローカルのブラウザー検査だけに使う依存
 npx playwright install chromium
 make smoke        # 実キー・同時タッチ・一時停止・リセット・画像欠落、実撮影
+make check-style  # 整形・lint・型検査(C: clang-format/clang-tidy/-Werror, Python: Ruff/mypy, shell: shfmt/ShellCheck, JS: Biome/tsc)
+make fmt          # 整形を書き戻す
 ```
 
 `make test` はブラウザー接続層と元のCモデルを900ステップ・全2,304セルで

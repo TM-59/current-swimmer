@@ -14,6 +14,8 @@
   missing from the tables. Add the page section, figure and table row in the same PR as a
   new law or rule. The README's "26 statements" must match the table.
 - No persistence or external network services. Do not add saving as part of art work.
+- Style: `make fmt` / `make check-style` (clang-format, clang-tidy, -Werror; Ruff, mypy strict; shfmt, ShellCheck; Biome, tsc --checkJs; versions in uv.lock and package-lock.json). No suppression comments or excludes; `TIDY_EXTRA="-isystem <dir>"` where the C library headers are elsewhere.
+  Outside Biome (generated, not hand-written): `docs/narrative/{play-order,ablation,tension}.json` (`make story`) and `docs/theory/figures/values.md` (`make theory-figs`). Ruff leaves out only one rule of each pair the tool declares incompatible (pyproject.toml names the other).
 - Artwork must not imply that the disc collision/drag model has become a fish-body
   simulation. Label the physical diameter and use domain units for measurements.
 
