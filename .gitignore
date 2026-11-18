@@ -12,3 +12,6 @@ story_bench
 theory_figs
 test_wake
 wake-wall-study
+test-results/
+.tm-ctest/
+.tm-home/

@@ -168,6 +168,22 @@ make smoke        # 実キー・同時タッチ・一時停止・リセット・
 `make test` はブラウザー接続層と元のCモデルを900ステップ・全2,304セルで
 比較する検査も含む。ブラウザー検査はCIで実行せず、既存CIはPR上のC単体検査のみ。
 
+### ローカル専用の標準入口(M61)
+
+```bash
+make check        # 単体・要件対応(trace)・bench・smoke をまとめて実行
+make test-unit    # make test と同じプログラム + docs/theory の契約検査
+make test-trace   # [REQ-...] を名前に持つ testcase だけ(docs/requirements.md と照合)
+make test-perf    # make bench
+make test-e2e     # make smoke
+```
+
+各プログラムを CTest の testcase 1 件として登録し(`tests/ctest/CMakeLists.txt`)、
+共通 runner(`~/project-context/bin/tm-test.py`)が追跡ファイルだけの一時コピーで実行する。
+結果は git 管理外の `test-results/<run_id>/<kind>.xml` と `test-results/summary.json`。
+必要なもの: `cc`・`cmake`/`ctest`・Python 3.14、smoke には `emcc` と npm の cache にある Playwright。
+置かない種類と理由は `test-inventory.json`。
+
 ## Roadmap
 
 See the open issues: vortex shedding behind obstacles, a tail model that swims by body undulation, and a goal-driven game mode.

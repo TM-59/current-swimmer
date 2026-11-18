@@ -90,3 +90,41 @@ theory-check:
 clean:
 	rm -f current-swimmer test_fluid test_gif test_view test_story story_bench theory_figs test_wake
 	rm -rf dist
+
+# ---- M61: local-only test standard (~/project-context/rules/test-standard.json) ----
+# `make test` above stays the CI gate. `make check` runs every adopted kind through the
+# common isolated runner (tm test) and writes git-ignored JUnit + test-results/summary.json.
+TM_TEST_PYTHON ?= python3.14
+TM_TEST_CMAKE ?= cmake
+TM_TEST_CTEST ?= ctest
+TM_TEST_NPM_CACHE ?= $(HOME)/.npm
+TM_UNIT_BINS := test_fluid test_gif test_view test_story story_bench test_wake current-swimmer
+
+.PHONY: test-unit check test-trace test-perf test-e2e tm-ctest tm-deps test-tm-unit test-tm-trace test-tm-perf test-tm-e2e
+test-unit:
+	$(TM_TEST_PYTHON) scripts/local-test.py unit
+
+check:
+	$(TM_TEST_PYTHON) scripts/local-test.py all
+
+test-trace test-perf test-e2e:
+	$(TM_TEST_PYTHON) scripts/local-test.py $(@:test-%=%)
+
+tm-ctest:
+	mkdir -p test-results
+	"$(TM_TEST_CMAKE)" -S tests/ctest -B .tm-ctest >/dev/null
+
+test-tm-unit test-tm-trace: tm-ctest
+	$(MAKE) -j1 $(TM_UNIT_BINS)
+	"$(TM_TEST_CTEST)" --test-dir .tm-ctest -j 1 -L '^$(@:test-tm-%=%)$$' --output-on-failure --output-junit "$(CURDIR)/test-results/$(@:test-tm-%=%).xml"
+
+test-tm-perf: tm-ctest
+	"$(TM_TEST_CTEST)" --test-dir .tm-ctest -j 1 -L '^perf$$' --output-on-failure --output-junit "$(CURDIR)/test-results/perf.xml"
+
+tm-deps:
+	@test -n "$(TM_TEST_RUN_ID)" || { echo "Requires isolated tm test" >&2; exit 1; }
+	mkdir -p .tm-home && touch .tm-home/user.npmrc .tm-home/global.npmrc
+	@test -d node_modules/playwright || npm ci --offline --ignore-scripts --no-audit --no-fund --userconfig="$(CURDIR)/.tm-home/user.npmrc" --globalconfig="$(CURDIR)/.tm-home/global.npmrc" --cache="$(TM_TEST_NPM_CACHE)"
+
+test-tm-e2e: tm-ctest tm-deps
+	"$(TM_TEST_CTEST)" --test-dir .tm-ctest -j 1 -L '^e2e$$' --output-on-failure --output-junit "$(CURDIR)/test-results/e2e.xml"
