@@ -1,6 +1,8 @@
 #ifndef WAKE_H
 #define WAKE_H
 
+#include "vec.h"
+
 /* M2: flow past a fixed circular cylinder in a channel (a separate solver; the pool of fluid.c is
  * unchanged).
  *
@@ -77,8 +79,8 @@ float wake_control_volume_drag(const Wake *w, float half);
 float wake_vorticity_at(const Wake *w, int i, int j);
 /* Largest |div u| over the fluid cells after the last projection [U / D]. */
 float wake_max_divergence(const Wake *w);
-/* Bilinear velocity at (x, y) in diameters. */
-void wake_sample(const Wake *w, float x, float y, float *u, float *v);
+/* Bilinear velocity at a point given in diameters. */
+Vec2f wake_sample(const Wake *w, Vec2f at);
 /* Length of the closed recirculation behind the cylinder (from its rear point to where u on the
  * centre line turns positive again) [D]; 0 when no reversed flow is found. */
 float wake_recirculation_length(const Wake *w);
@@ -95,13 +97,27 @@ typedef struct {
     float frequency, strouhal, cd_mean, cd_amp, cl_amp;
     int periods;
 } WakeStats;
-WakeStats wake_stats(const float *cl, const float *cd, int count, int from, float dt);
+/* The part of a record to use: count samples, from the index `from`, dt apart. */
+typedef struct {
+    int count, from;
+    float dt;
+} WakeWindow;
+WakeStats wake_stats(const float *cl, const float *cd, WakeWindow window);
 
 /* Runs the wake for t_end (in D / U) from rest-plus-a-nudge with step dt (wake_dt when dt <= 0) and
  * measures over the last half of the run. When cl or cd are not NULL they receive one value per
  * step (cap entries at most). lr receives the recirculation length at the end. Returns -1 on
  * allocation failure. */
-int wake_run(int cells_per_diameter, float reynolds, float t_end, float dt, WakeStats *stats,
-             float *lr, float *cl, float *cd, int cap, int *count);
+typedef struct {
+    int cells_per_diameter;
+    float reynolds, t_end, dt;
+} WakeRun;
+/* Where the per-step record goes (any pointer may be NULL). */
+typedef struct {
+    float *cl, *cd;
+    int cap;
+    int *count;
+} WakeRecord;
+int wake_run(WakeRun run, WakeStats *stats, float *lr, const WakeRecord *record);
 
 #endif

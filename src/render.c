@@ -93,10 +93,10 @@ int render_field_svg(const Fluid *f, const Swimmer *s, const char *path)
         ref = 1.0f;
     }
     ref *= 0.5f;
-    fprintf(fp,
-            "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\" width=\"%d\" "
-            "height=\"%d\" shape-rendering=\"crispEdges\">\n",
-            size, size, size, size);
+    (void)fprintf(fp,
+                  "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\" width=\"%d\" "
+                  "height=\"%d\" shape-rendering=\"crispEdges\">\n",
+                  size, size, size, size);
     for (int j = 1; j <= n; j++) {
         for (int i = 1; i <= n; i++) {
             float t = tanhf(fluid_vorticity_at(f, i, j) / ref);
@@ -104,18 +104,18 @@ int render_field_svg(const Fluid *f, const Swimmer *s, const char *path)
             int r = (int)(255.0f - (t < 0.0f ? 200.0f * a : 40.0f * a));
             int g = (int)(255.0f - 190.0f * a);
             int b = (int)(255.0f - (t < 0.0f ? 40.0f * a : 200.0f * a));
-            fprintf(fp,
-                    "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"rgb(%d,%d,%d)\"/>\n",
-                    (i - 1) * cell, (n - j) * cell, cell, cell, r, g, b);
+            (void)fprintf(
+                fp, "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"rgb(%d,%d,%d)\"/>\n",
+                (i - 1) * cell, (n - j) * cell, cell, cell, r, g, b);
         }
     }
     float cx = s->x * (float)size, cy = (1.0f - s->y) * (float)size, rad = s->radius * (float)size;
-    fprintf(fp, "<circle cx=\"%.1f\" cy=\"%.1f\" r=\"%.1f\" fill=\"#222\"/>\n", cx, cy, rad);
-    fprintf(fp,
-            "<line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\" stroke=\"#ffd400\" "
-            "stroke-width=\"4\"/>\n",
-            cx, cy, cx + cosf(s->heading) * rad * 1.8f, cy - sinf(s->heading) * rad * 1.8f);
-    fprintf(fp, "</svg>\n");
+    (void)fprintf(fp, "<circle cx=\"%.1f\" cy=\"%.1f\" r=\"%.1f\" fill=\"#222\"/>\n", cx, cy, rad);
+    (void)fprintf(fp,
+                  "<line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\" stroke=\"#ffd400\" "
+                  "stroke-width=\"4\"/>\n",
+                  cx, cy, cx + cosf(s->heading) * rad * 1.8f, cy - sinf(s->heading) * rad * 1.8f);
+    (void)fprintf(fp, "</svg>\n");
     return fclose(fp) == 0 ? 0 : -1;
 }
 
@@ -126,8 +126,9 @@ static int wake_level(float w, float ref)
     return q < -10 ? -10 : q > 10 ? 10 : q;
 }
 
-int render_wake_svg(const Wake *w, const char *path, const char *title)
+int render_wake_svg(const Wake *w, SvgFigure figure)
 {
+    const char *path = figure.path, *title = figure.title;
     int cell = 5, ml = 46, mt = 34, mb = 40, pw = w->nx * cell, ph = w->ny * cell;
     int width = ml + pw + 14, height = mt + ph + mb;
     FILE *fp = fopen(path, "w");
@@ -135,17 +136,17 @@ int render_wake_svg(const Wake *w, const char *path, const char *title)
         return -1;
     }
     float ref = 1.5f; /* fixed scale in U / D so that runs can be compared */
-    fprintf(fp,
-            "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\" width=\"%d\" "
-            "height=\"%d\" "
-            "font-family=\"sans-serif\" font-size=\"12\">\n",
-            width, height, width, height);
-    fprintf(fp, "<rect width=\"%d\" height=\"%d\" fill=\"#ffffff\"/>\n", width, height);
-    fprintf(
+    (void)fprintf(fp,
+                  "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\" width=\"%d\" "
+                  "height=\"%d\" "
+                  "font-family=\"sans-serif\" font-size=\"12\">\n",
+                  width, height, width, height);
+    (void)fprintf(fp, "<rect width=\"%d\" height=\"%d\" fill=\"#ffffff\"/>\n", width, height);
+    (void)fprintf(
         fp,
         "<text x=\"%d\" y=\"22\" font-size=\"15\" font-weight=\"bold\" fill=\"#222\">%s</text>\n",
         ml, title);
-    fprintf(fp, "<g shape-rendering=\"crispEdges\">\n");
+    (void)fprintf(fp, "<g shape-rendering=\"crispEdges\">\n");
     /* One rectangle per run of equal colour along a row keeps the file small. */
     for (int j = w->ny - 1; j >= 0; j--) {
         int i = 0;
@@ -159,7 +160,7 @@ int render_wake_svg(const Wake *w, const char *path, const char *title)
             int g = (int)(255.0f - 190.0f * a);
             int b = (int)(255.0f - (q < 0 ? 40.0f * a : 200.0f * a));
             if (q != 0) {
-                fprintf(
+                (void)fprintf(
                     fp,
                     "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"rgb(%d,%d,%d)\"/>\n",
                     ml + i * cell, mt + (w->ny - 1 - j) * cell, (k - i) * cell, cell, r, g, b);
@@ -167,30 +168,31 @@ int render_wake_svg(const Wake *w, const char *path, const char *title)
             i = k;
         }
     }
-    fprintf(fp,
-            "</g>\n<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\" "
-            "stroke=\"#888\"/>\n",
-            ml, mt, pw, ph);
+    (void)fprintf(fp,
+                  "</g>\n<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\" "
+                  "stroke=\"#888\"/>\n",
+                  ml, mt, pw, ph);
     float px = (float)ml + w->cx / w->h * (float)cell,
           py = (float)mt + (float)ph - w->cy / w->h * (float)cell;
-    fprintf(fp, "<circle cx=\"%.1f\" cy=\"%.1f\" r=\"%.1f\" fill=\"#333\"/>\n", px, py,
-            w->r / w->h * (float)cell);
+    (void)fprintf(fp, "<circle cx=\"%.1f\" cy=\"%.1f\" r=\"%.1f\" fill=\"#333\"/>\n", px, py,
+                  w->r / w->h * (float)cell);
     for (int x = 0; x <= w->nx / w->n; x += 2) {
-        fprintf(fp, "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" fill=\"#444\">%d</text>\n",
-                ml + x * w->n * cell, mt + ph + 16, x);
+        (void)fprintf(fp,
+                      "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" fill=\"#444\">%d</text>\n",
+                      ml + x * w->n * cell, mt + ph + 16, x);
     }
     for (int y = 0; y <= w->ny / w->n; y += 2) {
-        fprintf(fp, "<text x=\"%d\" y=\"%d\" text-anchor=\"end\" fill=\"#444\">%d</text>\n", ml - 6,
-                mt + ph - y * w->n * cell + 4, y);
+        (void)fprintf(fp, "<text x=\"%d\" y=\"%d\" text-anchor=\"end\" fill=\"#444\">%d</text>\n",
+                      ml - 6, mt + ph - y * w->n * cell + 4, y);
     }
-    fprintf(fp,
-            "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" fill=\"#222\">x [D]   (red: "
-            "counter-clockwise, blue: clockwise; colour = tanh(&#969; / 1.5 U/D))</text>\n",
-            ml + pw / 2, height - 6);
-    fprintf(fp,
-            "<text transform=\"translate(14 %d) rotate(-90)\" text-anchor=\"middle\" "
-            "fill=\"#222\">y [D]</text>\n",
-            mt + ph / 2);
-    fprintf(fp, "</svg>\n");
+    (void)fprintf(fp,
+                  "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" fill=\"#222\">x [D]   (red: "
+                  "counter-clockwise, blue: clockwise; colour = tanh(&#969; / 1.5 U/D))</text>\n",
+                  ml + pw / 2, height - 6);
+    (void)fprintf(fp,
+                  "<text transform=\"translate(14 %d) rotate(-90)\" text-anchor=\"middle\" "
+                  "fill=\"#222\">y [D]</text>\n",
+                  mt + ph / 2);
+    (void)fprintf(fp, "</svg>\n");
     return fclose(fp) == 0 ? 0 : -1;
 }

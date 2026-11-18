@@ -19,8 +19,24 @@ typedef struct {
 static const char *const SCENE_ID[JS_COUNT] = {"outlet", "culvert", "eddy",  "warm",
                                                "taste",  "reeds",   "surge", "spring"};
 
-static inline void run_journey(uint64_t key, unsigned effects, int route, int stay, RunResult *out)
+/* The answers to the two choice scenes: route 0 the pipe / 1 the ditch; stay 0 / 1. */
+typedef struct {
+    int route;
+    int stay;
+} Choices;
+
+/* One journey of the bench: the swimmer's key, the story effects that are on, and the choices. */
+typedef struct {
+    uint64_t key;
+    unsigned effects;
+    Choices choices;
+} RunPlan;
+
+static inline void run_journey(const RunPlan *plan, RunResult *out)
 {
+    uint64_t key = plan->key;
+    unsigned effects = plan->effects;
+    int route = plan->choices.route, stay = plan->choices.stay;
     Journey j;
     Policy p;
     memset(out, 0, sizeof *out);
@@ -39,7 +55,8 @@ static inline void run_journey(uint64_t key, unsigned effects, int route, int st
                 float turn;
                 int stroke;
                 policy_controls(&p, &j, &turn, &stroke);
-                journey_step(&j, turn, stroke); /* the first step after the scene closes */
+                journey_step(
+                    &j, (JourneyInput){turn, stroke}); /* the first step after the scene closes */
                 out->quiet[scene] = calm && j.loud == loud && j.banner != JB_CLEAR;
             }
             continue;
@@ -47,7 +64,7 @@ static inline void run_journey(uint64_t key, unsigned effects, int route, int st
         float turn;
         int stroke;
         policy_controls(&p, &j, &turn, &stroke);
-        journey_step(&j, turn, stroke);
+        journey_step(&j, (JourneyInput){turn, stroke});
         steps++;
     }
     out->completed = j.reach >= J_REACHES;
@@ -78,15 +95,7 @@ static inline uint64_t tension_key(int i, int run)
 enum { PLAY_SEEDS = 12, ABLATION_SEEDS = 20, TENSION_SEEDS = 16, TENSION_RUNS = 8 };
 /* Default choices for the ablation rows: the pipe, and leaving Silt at once. */
 enum { DEFAULT_ROUTE = 0, DEFAULT_STAY = 1 };
-static inline void play_choices(int i, int *route, int *stay)
-{
-    *route = i % 2;
-    *stay = (i / 2) % 2;
-}
-static inline void tension_choices(int run, int *route, int *stay)
-{
-    *route = run % 2;
-    *stay = (run / 2) % 2;
-}
+static inline Choices play_choices(int i) { return (Choices){i % 2, (i / 2) % 2}; }
+static inline Choices tension_choices(int run) { return (Choices){run % 2, (run / 2) % 2}; }
 
 #endif

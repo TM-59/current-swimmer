@@ -5,7 +5,6 @@
  * Usage: story_bench <dir>          write all three files (make story)
  *        story_bench --check <dir>  re-run a few rows and require them verbatim in the files (make
  * test) Runs are spread over STORY_JOBS processes (default 8); every run is deterministic. */
-#define _POSIX_C_SOURCE 200809L
 #include "story_run.h"
 
 #include <stdio.h>
@@ -14,26 +13,31 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-typedef struct {
-    uint64_t key;
-    unsigned effects;
-    int route, stay;
-} Job;
+typedef RunPlan Job;
 
 static void run_all(const Job *jobs, int n, RunResult *out)
 {
+    /* STORY_JOBS chooses one of 1..64 processes (default 8); the count used is taken from that
+     * fixed range, not from the environment string itself. */
     const char *env = getenv("STORY_JOBS");
-    int workers = env ? atoi(env) : 8;
-    if (workers < 1) {
-        workers = 1;
+    long asked = 8;
+    if (env) {
+        char *end = NULL;
+        asked = strtol(env, &end, 10);
+        if (end == env) {
+            asked = 0;
+        }
+    }
+    int workers = 1;
+    for (int k = 1; k <= 64; k++) {
+        if (k <= asked) {
+            workers = k;
+        }
     }
     if (workers > n) {
         workers = n;
     }
     int fds[64][2];
-    if (workers > 64) {
-        workers = 64;
-    }
     for (int w = 0; w < workers; w++) {
         if (pipe(fds[w])) {
             perror("pipe");
@@ -48,7 +52,7 @@ static void run_all(const Job *jobs, int n, RunResult *out)
             close(fds[w][0]);
             for (int i = w; i < n; i += workers) {
                 RunResult r;
-                run_journey(jobs[i].key, jobs[i].effects, jobs[i].route, jobs[i].stay, &r);
+                run_journey(&jobs[i], &r);
                 if (write(fds[w][1], &i, sizeof i) != (ssize_t)sizeof i ||
                     write(fds[w][1], &r, sizeof r) != (ssize_t)sizeof r) {
                     _exit(1);
@@ -60,21 +64,30 @@ static void run_all(const Job *jobs, int n, RunResult *out)
     }
     for (int w = 0; w < workers; w++) {
         FILE *in = fdopen(fds[w][0], "rb");
-        int i;
+        if (!in) {
+            perror("fdopen");
+            exit(1);
+        }
+        /* Worker w sends its runs in order: w, w + workers, ...; each must arrive where expected.
+         */
+        int i, want = w;
         while (fread(&i, sizeof i, 1, in) == 1) {
-            if (i < 0 || i >= n || fread(&out[i], sizeof out[i], 1, in) != 1) {
-                fputs("bad worker output\n", stderr);
+            if (i != want || want >= n || fread(&out[want], sizeof out[want], 1, in) != 1) {
+                (void)fputs("bad worker output\n", stderr);
                 exit(1);
             }
+            want += workers;
         }
-        fclose(in);
+        (void)fclose(in); /* read only: the worker results are already in out[] */
     }
     int status, failed = 0;
     while (wait(&status) > 0) {
-        failed |= !WIFEXITED(status) || WEXITSTATUS(status) != 0;
+        if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+            failed = 1;
+        }
     }
     if (failed) {
-        fputs("a story worker failed\n", stderr);
+        (void)fputs("a story worker failed\n", stderr);
         exit(1);
     }
 }
@@ -84,8 +97,8 @@ static const char *ending_id(int e) { return e == 0 ? "end-stay" : e == 1 ? "end
 
 static void play_row(char *buf, size_t cap, int i, const RunResult *r)
 {
-    int route, stay;
-    play_choices(i, &route, &stay);
+    const Choices ch = play_choices(i);
+    int route = ch.route, stay = ch.stay;
     size_t n = (size_t)snprintf(
         buf, cap, "{\"seed\": \"%d\", \"choices\": {\"culvert\": %d, \"reeds\": %d}, \"order\": [",
         i, route, stay);
@@ -102,19 +115,19 @@ static void play_row(char *buf, size_t cap, int i, const RunResult *r)
             first = 0;
         }
     }
-    snprintf(buf + n, cap - n, "]}");
+    (void)snprintf(buf + n, cap - n, "]}");
 }
 
 static void ablation_row(char *buf, size_t cap, int i, const RunResult *r)
 {
-    snprintf(buf, cap, "{\"seed\": \"%d\", \"seconds\": %.1f, \"strain\": %.2f}", i, r->seconds,
-             r->strain);
+    (void)snprintf(buf, cap, "{\"seed\": \"%d\", \"seconds\": %.1f, \"strain\": %.2f}", i,
+                   r->seconds, r->strain);
 }
 
 static void tension_row(char *buf, size_t cap, int i, int run, const RunResult *r)
 {
-    int route, stay;
-    tension_choices(run, &route, &stay);
+    const Choices ch = tension_choices(run);
+    int route = ch.route, stay = ch.stay;
     size_t n = (size_t)snprintf(buf, cap,
                                 "{\"seed\": \"%d\", \"run\": %d, \"path\": {\"culvert\": \"%d\", "
                                 "\"reeds\": \"%d\"}, \"completed\": %s, \"crisis\": [",
@@ -127,7 +140,7 @@ static void tension_row(char *buf, size_t cap, int i, int run, const RunResult *
     for (int k = 0; k < J_REACHES; k++) {
         n += (size_t)snprintf(buf + n, cap - n, "%s%d", k ? ", " : "", r->failure[k]);
     }
-    snprintf(buf + n, cap - n, "]}");
+    (void)snprintf(buf + n, cap - n, "]}");
 }
 
 /* ------------------------------------------------------------------ arms */
@@ -161,32 +174,35 @@ static const int ARM_STAYS[ARMS] = {DEFAULT_STAY, DEFAULT_STAY, DEFAULT_STAY,
 
 static Job ablation_job(int arm, int i)
 {
-    return (Job){ablation_key(i), ARM_EFFECTS[arm], ARM_ROUTE[arm], ARM_STAYS[arm]};
+    return (Job){ablation_key(i), ARM_EFFECTS[arm], {ARM_ROUTE[arm], ARM_STAYS[arm]}};
 }
-static Job play_job(int i)
-{
-    int r, s;
-    play_choices(i, &r, &s);
-    return (Job){play_key(i), JE_ALL, r, s};
-}
+static Job play_job(int i) { return (Job){play_key(i), JE_ALL, play_choices(i)}; }
 static Job tension_job(int i, int run)
 {
-    int r, s;
-    tension_choices(run, &r, &s);
-    return (Job){tension_key(i, run), JE_ALL, r, s};
+    return (Job){tension_key(i, run), JE_ALL, tension_choices(run)};
 }
 
 /* ------------------------------------------------------------------ full output */
 static FILE *open_out(const char *dir, const char *name)
 {
     char path[512];
-    snprintf(path, sizeof path, "%s/%s", dir, name);
+    (void)snprintf(path, sizeof path, "%s/%s", dir, name);
     FILE *f = fopen(path, "w");
     if (!f) {
-        fprintf(stderr, "cannot write %s\n", path);
+        (void)fprintf(stderr, "cannot write %s\n", path);
         exit(1);
     }
     return f;
+}
+
+/* A short or failed write would leave a truncated table; stop with an error instead. */
+static void close_out(FILE *f)
+{
+    int bad = ferror(f) != 0;
+    if (fclose(f) != 0 || bad) {
+        (void)fprintf(stderr, "write error\n");
+        exit(1);
+    }
 }
 
 static void write_rows(FILE *f, const char *indent, const RunResult *res, int arm)
@@ -194,17 +210,17 @@ static void write_rows(FILE *f, const char *indent, const RunResult *res, int ar
     char row[512];
     for (int i = 0; i < ABLATION_SEEDS; i++) {
         ablation_row(row, sizeof row, i, &res[arm * ABLATION_SEEDS + i]);
-        fprintf(f, "%s%s%s\n", indent, row, i + 1 < ABLATION_SEEDS ? "," : "");
+        (void)fprintf(f, "%s%s%s\n", indent, row, i + 1 < ABLATION_SEEDS ? "," : "");
     }
 }
 
 static void write_arm_pair(FILE *f, const char *name, const RunResult *res, int off, int last)
 {
-    fprintf(f, "    \"%s\": {\n      \"on\": [\n", name);
+    (void)fprintf(f, "    \"%s\": {\n      \"on\": [\n", name);
     write_rows(f, "        ", res, ARM_ON);
-    fprintf(f, "      ],\n      \"off\": [\n");
+    (void)fprintf(f, "      ],\n      \"off\": [\n");
     write_rows(f, "        ", res, off);
-    fprintf(f, "      ]\n    }%s\n", last ? "" : ",");
+    (void)fprintf(f, "      ]\n    }%s\n", last ? "" : ",");
 }
 
 static const char *GEN = "tests/story_bench.c (make story)";
@@ -223,6 +239,8 @@ static int write_all(const char *dir)
     Job *jobs = calloc((size_t)n, sizeof *jobs);
     RunResult *res = calloc((size_t)n, sizeof *res);
     if (!jobs || !res) {
+        free(jobs);
+        free(res);
         return 1;
     }
     for (int i = 0; i < np; i++) {
@@ -242,78 +260,82 @@ static int write_all(const char *dir)
     char row[1024];
 
     FILE *f = open_out(dir, "play-order.json");
-    fprintf(f,
-            "{\n  \"version\": 1,\n  \"generator\": \"%s\",\n  \"note\": \"Scenes open at fixed "
-            "progress points: a reach starts, a reach is cleared, "
-            "the halfway mark of the last reach. culvert 0 = pipe, 1 = ditch; reeds 0 = stay with "
-            "Silt, 1 = leave. quiet lists the heavy scenes "
-            "shown with no cleared banner raised before the next stroke. Do not edit by hand.\",\n "
-            " \"seeds\": [\n",
-            GEN);
+    (void)fprintf(
+        f,
+        "{\n  \"version\": 1,\n  \"generator\": \"%s\",\n  \"note\": \"Scenes open at fixed "
+        "progress points: a reach starts, a reach is cleared, "
+        "the halfway mark of the last reach. culvert 0 = pipe, 1 = ditch; reeds 0 = stay with "
+        "Silt, 1 = leave. quiet lists the heavy scenes "
+        "shown with no cleared banner raised before the next stroke. Do not edit by hand.\",\n "
+        " \"seeds\": [\n",
+        GEN);
     for (int i = 0; i < np; i++) {
         play_row(row, sizeof row, i, &res[i]);
-        fprintf(f, "    %s%s\n", row, i + 1 < np ? "," : "");
+        (void)fprintf(f, "    %s%s\n", row, i + 1 < np ? "," : "");
     }
-    fprintf(f, "  ]\n}\n");
-    fclose(f);
+    (void)fprintf(f, "  ]\n}\n");
+    close_out(f);
 
     const RunResult *ab = res + np;
     f = open_out(dir, "ablation.json");
-    fprintf(f,
-            "{\n  \"version\": 1,\n  \"generator\": \"%s\",\n  \"note\": \"Same %d seeds in every "
-            "arm. on = all story numbers, pipe and leave Silt; "
-            "off = scenes still open but every story number is neutral; beats = only that scene's "
-            "numbers removed; choices = one choice fixed per path, "
-            "the other at its default. Do not edit by hand.\",\n",
-            GEN, ABLATION_SEEDS);
-    fprintf(f, "  \"metrics\": {\n"
-               "    \"seconds\": {\"better\": \"lower\", \"kind\": \"outcome\", \"felt\": "
-               "\"screen\", \"label\": \"seconds swum, shown on the clock; every one is a played "
-               "step (holds at the weir and in the reeds included, no flat waits)\"},\n"
-               "    \"strain\": {\"better\": \"lower\", \"kind\": \"outcome\", \"felt\": "
-               "\"screen\", \"label\": \"seconds with the stamina bar in the red (below 20 %%); "
-               "strokes do nothing once it is empty\"}\n"
-               "  },\n  \"effects\": {\n    \"on\": [\n");
+    (void)fprintf(
+        f,
+        "{\n  \"version\": 1,\n  \"generator\": \"%s\",\n  \"note\": \"Same %d seeds in every "
+        "arm. on = all story numbers, pipe and leave Silt; "
+        "off = scenes still open but every story number is neutral; beats = only that scene's "
+        "numbers removed; choices = one choice fixed per path, "
+        "the other at its default. Do not edit by hand.\",\n",
+        GEN, ABLATION_SEEDS);
+    (void)fprintf(
+        f, "  \"metrics\": {\n"
+           "    \"seconds\": {\"better\": \"lower\", \"kind\": \"outcome\", \"felt\": "
+           "\"screen\", \"label\": \"seconds swum, shown on the clock; every one is a played "
+           "step (holds at the weir and in the reeds included, no flat waits)\"},\n"
+           "    \"strain\": {\"better\": \"lower\", \"kind\": \"outcome\", \"felt\": "
+           "\"screen\", \"label\": \"seconds with the stamina bar in the red (below 20 %%); "
+           "strokes do nothing once it is empty\"}\n"
+           "  },\n  \"effects\": {\n    \"on\": [\n");
     write_rows(f, "      ", ab, ARM_ON);
-    fprintf(f, "    ],\n    \"off\": [\n");
+    (void)fprintf(f, "    ],\n    \"off\": [\n");
     write_rows(f, "      ", ab, ARM_OFF);
-    fprintf(f, "    ]\n  },\n  \"beats\": {\n");
+    (void)fprintf(f, "    ]\n  },\n  \"beats\": {\n");
     write_arm_pair(f, "outlet", ab, ARM_OUTLET, 0);
     write_arm_pair(f, "eddy", ab, ARM_EDDY, 0);
     write_arm_pair(f, "taste", ab, ARM_TASTE, 0);
     write_arm_pair(f, "reeds", ab, ARM_REEDS_LOSS, 0);
     write_arm_pair(f, "surge", ab, ARM_SURGE, 1);
-    fprintf(f, "  },\n  \"choices\": {\n    \"culvert\": {\"paths\": {\n      \"0\": [\n");
+    (void)fprintf(f, "  },\n  \"choices\": {\n    \"culvert\": {\"paths\": {\n      \"0\": [\n");
     write_rows(f, "        ", ab, ARM_ON);
-    fprintf(f, "      ],\n      \"1\": [\n");
+    (void)fprintf(f, "      ],\n      \"1\": [\n");
     write_rows(f, "        ", ab, ARM_DITCH);
-    fprintf(f, "      ]\n    }},\n    \"reeds\": {\"paths\": {\n      \"0\": [\n");
+    (void)fprintf(f, "      ]\n    }},\n    \"reeds\": {\"paths\": {\n      \"0\": [\n");
     write_rows(f, "        ", ab, ARM_STAY);
-    fprintf(f, "      ],\n      \"1\": [\n");
+    (void)fprintf(f, "      ],\n      \"1\": [\n");
     write_rows(f, "        ", ab, ARM_ON);
-    fprintf(f, "      ]\n    }}\n  }\n}\n");
-    fclose(f);
+    (void)fprintf(f, "      ]\n    }}\n  }\n}\n");
+    close_out(f);
 
     const RunResult *tn = res + np + na;
     f = open_out(dir, "tension.json");
-    fprintf(f, "{\n  \"version\": 1,\n  \"generator\": \"%s\",\n  \"policy\": \"%s\",\n", GEN,
-            POLICY);
-    fprintf(f,
-            "  \"crisis\": \"the stamina bar below 12 %% at any moment in the reach, or swept back "
-            "(a failure counts as a crisis)\",\n"
-            "  \"failure\": \"swept back: the current takes more than 0.2 of the ground won in the "
-            "reach\",\n"
-            "  \"segments\": [\"outlet pool\", \"culvert\", \"eddy stone to the drain\", \"warm "
-            "water\", \"last reach\"],\n"
-            "  \"note\": \"%d seeds x %d runs; every run has its own stirred seed; the path comes "
-            "from the run number.\",\n  \"seeds\": [\n",
-            TENSION_SEEDS, TENSION_RUNS);
+    (void)fprintf(f, "{\n  \"version\": 1,\n  \"generator\": \"%s\",\n  \"policy\": \"%s\",\n", GEN,
+                  POLICY);
+    (void)fprintf(
+        f,
+        "  \"crisis\": \"the stamina bar below 12 %% at any moment in the reach, or swept back "
+        "(a failure counts as a crisis)\",\n"
+        "  \"failure\": \"swept back: the current takes more than 0.2 of the ground won in the "
+        "reach\",\n"
+        "  \"segments\": [\"outlet pool\", \"culvert\", \"eddy stone to the drain\", \"warm "
+        "water\", \"last reach\"],\n"
+        "  \"note\": \"%d seeds x %d runs; every run has its own stirred seed; the path comes "
+        "from the run number.\",\n  \"seeds\": [\n",
+        TENSION_SEEDS, TENSION_RUNS);
     for (int i = 0; i < nt; i++) {
         tension_row(row, sizeof row, i / TENSION_RUNS, i % TENSION_RUNS, &tn[i]);
-        fprintf(f, "    %s%s\n", row, i + 1 < nt ? "," : "");
+        (void)fprintf(f, "    %s%s\n", row, i + 1 < nt ? "," : "");
     }
-    fprintf(f, "  ]\n}\n");
-    fclose(f);
+    (void)fprintf(f, "  ]\n}\n");
+    close_out(f);
 
     double sec = 0;
     for (int i = 0; i < ABLATION_SEEDS; i++) {
@@ -329,28 +351,36 @@ static int write_all(const char *dir)
 static char *slurp(const char *dir, const char *name)
 {
     char path[512];
-    snprintf(path, sizeof path, "%s/%s", dir, name);
+    (void)snprintf(path, sizeof path, "%s/%s", dir, name);
     FILE *f = fopen(path, "rb");
     if (!f) {
-        fprintf(stderr, "missing %s\n", path);
+        (void)fprintf(stderr, "missing %s\n", path);
         exit(1);
     }
-    fseek(f, 0, SEEK_END);
-    long size = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char *buf = malloc((size_t)size + 1);
-    if (!buf || fread(buf, 1, (size_t)size, f) != (size_t)size) {
+    /* Read in growing chunks; the bench files are tens of kB. */
+    size_t cap = 65536, len = 0;
+    char *buf = malloc(cap);
+    if (!buf) {
         exit(1);
     }
-    buf[size] = 0;
-    fclose(f);
+    for (;;) {
+        len += fread(buf + len, 1, cap - 1 - len, f);
+        if (len < cap - 1) {
+            break;
+        }
+        char *bigger = realloc(buf, cap * 2);
+        if (!bigger) {
+            exit(1);
+        }
+        buf = bigger;
+        cap *= 2;
+    }
+    if (ferror(f)) {
+        exit(1);
+    }
+    buf[len] = 0;
+    (void)fclose(f); /* read only: nothing is lost if closing fails */
     return buf;
-}
-
-static int cmp_key(const void *a, const void *b)
-{
-    uint64_t x = *(const uint64_t *)a, y = *(const uint64_t *)b;
-    return x < y ? -1 : x > y;
 }
 
 static int check(const char *dir)
@@ -359,6 +389,9 @@ static int check(const char *dir)
     /* Every policy key in the bench is distinct (paired arms share a seed by design). */
     int nk = PLAY_SEEDS + ABLATION_SEEDS + TENSION_SEEDS * TENSION_RUNS, k = 0;
     uint64_t *keys = malloc(sizeof *keys * (size_t)nk);
+    if (!keys) {
+        return 1;
+    }
     for (int i = 0; i < PLAY_SEEDS; i++) {
         keys[k++] = play_key(i);
     }
@@ -370,10 +403,12 @@ static int check(const char *dir)
             keys[k++] = tension_key(i, r);
         }
     }
-    qsort(keys, (size_t)nk, sizeof *keys, cmp_key);
     for (int i = 1; i < nk; i++) {
-        if (keys[i] == keys[i - 1]) {
-            fputs("[seed] duplicate run key\n", stderr);
+        for (int j = 0; j < i; j++) {
+            if (keys[i] != keys[j]) {
+                continue;
+            }
+            (void)fputs("[seed] duplicate run key\n", stderr);
             failures++;
         }
     }
@@ -431,8 +466,8 @@ static int check(const char *dir)
             found++;
         }
         if (found != copies[i]) {
-            fprintf(stderr, "[bench] %s.json does not match the code (%d of %d copies): %s\n",
-                    rows[i].file, found, copies[i], rows[i].text);
+            (void)fprintf(stderr, "[bench] %s.json does not match the code (%d of %d copies): %s\n",
+                          rows[i].file, found, copies[i], rows[i].text);
             failures++;
         }
         free(rows[i].text);
@@ -441,8 +476,8 @@ static int check(const char *dir)
     free(abl);
     free(ten);
     if (failures) {
-        fprintf(stderr, "story bench check: %d failure(s); run make story to regenerate\n",
-                failures);
+        (void)fprintf(stderr, "story bench check: %d failure(s); run make story to regenerate\n",
+                      failures);
         return 1;
     }
     puts("story bench check: 8 re-run rows match docs/narrative; all run seeds distinct");
@@ -457,6 +492,6 @@ int main(int argc, char **argv)
     if (argc == 2) {
         return write_all(argv[1]);
     }
-    fputs("usage: story_bench <dir> | story_bench --check <dir>\n", stderr);
+    (void)fputs("usage: story_bench <dir> | story_bench --check <dir>\n", stderr);
     return 2;
 }

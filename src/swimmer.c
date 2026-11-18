@@ -8,10 +8,10 @@
 #define DRAG_QUAD 0.03f /* 0.5 * Cd * rho * diameter for Cd = 1, diameter = 0.06 */
 #define DRAG_LIN 0.002f
 
-void swimmer_init(Swimmer *s, float x, float y, float heading)
+void swimmer_init(Swimmer *s, Vec2f at, float heading)
 {
-    s->x = x;
-    s->y = y;
+    s->x = at.x;
+    s->y = at.y;
     s->vx = s->vy = 0.0f;
     s->heading = heading;
     s->radius = 0.03f;
@@ -24,13 +24,13 @@ float swimmer_speed(const Swimmer *s) { return hypotf(s->vx, s->vy); }
 static void push_fluid(Fluid *f, float x, float y, float fx, float fy, float sigma, float dt)
 {
     float area = 2.0f * PI_F * sigma * sigma;
-    fluid_add_force(f, x, y, fx / area, fy / area, sigma, dt);
+    fluid_add_force(f, (ForceBlob){x, y, fx / area, fy / area, sigma}, dt);
 }
 
 void swimmer_step(Swimmer *s, Fluid *f, const Controls *c, float dt)
 {
-    float uf, vf;
-    fluid_sample(f, s->x, s->y, &uf, &vf);
+    const Vec2f water = fluid_sample(f, (Vec2f){s->x, s->y});
+    float uf = water.x, vf = water.y;
     float wx = s->vx - uf, wy = s->vy - vf;
     float w = hypotf(wx, wy);
     float k = DRAG_LIN + DRAG_QUAD * w;

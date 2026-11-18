@@ -31,7 +31,7 @@ static void test_stats_on_a_sine(void)
         cl[k] = 0.3f * (float)sin(2.0 * PI * 0.2 * k * dt) + 0.01f;
         cd[k] = 1.5f + 0.02f * (float)sin(4.0 * PI * 0.2 * k * dt);
     }
-    WakeStats s = wake_stats(cl, cd, N, N / 2, dt);
+    WakeStats s = wake_stats(cl, cd, (WakeWindow){N, N / 2, dt});
     check(fabsf(s.frequency - 0.2f) < 1e-4f && fabsf(s.strouhal - 0.2f) < 1e-4f,
           "wake_stats: frequency of a sine to 1e-4");
     check(fabsf(s.cl_amp - 0.3f) < 1e-3f && fabsf(s.cd_amp - 0.02f) < 1e-3f,
@@ -59,16 +59,19 @@ static void test_projection_and_mass(void)
           "projection: |div u| < 1e-4 U/D in every cell after each step");
     double in = 0.0, out = 0.0;
     for (int j = 0; j < w.ny; j++) {
-        float u, v;
-        wake_sample(&w, 0.0f, ((float)j + 0.5f) * w.h, &u, &v);
+        float u = wake_sample(&w, (Vec2f){0.0f, ((float)j + 0.5f) * w.h}).x;
         in += u * w.h;
-        wake_sample(&w, (float)WAKE_LX, ((float)j + 0.5f) * w.h, &u, &v);
+        u = wake_sample(&w, (Vec2f){(float)WAKE_LX, ((float)j + 0.5f) * w.h}).x;
         out += u * w.h;
     }
     printf("     inflow %.6f, outflow %.6f [U D]\n", in, out);
     check(fabs(out / in - 1.0) < 1e-3, "mass: outflow equals inflow to 0.1 %");
     float u, v;
-    wake_sample(&w, w.cx, w.cy, &u, &v);
+    {
+        const Vec2f flow = wake_sample(&w, (Vec2f){w.cx, w.cy});
+        u = flow.x;
+        v = flow.y;
+    }
     check(fabsf(u) < 1e-6f && fabsf(v) < 1e-6f,
           "penalisation: the water inside the cylinder is at rest (|u| < 1e-6 U)");
     wake_free(&w);
@@ -99,7 +102,11 @@ static void test_solid_aware_projection(void)
         }
         mean[split] /= n;
         float u, v;
-        wake_sample(&w, w.cx, w.cy, &u, &v);
+        {
+            const Vec2f flow = wake_sample(&w, (Vec2f){w.cx, w.cy});
+            u = flow.x;
+            v = flow.y;
+        }
         inside[split] = sqrtf(u * u + v * v);
         wake_free(&w);
     }
@@ -149,7 +156,7 @@ static void test_steady_twin_vortex(void)
 {
     WakeStats s;
     float lr;
-    if (wake_run(CELLS, 30.0f, 50.0f, 0.0f, &s, &lr, NULL, NULL, 0, NULL)) {
+    if (wake_run((WakeRun){CELLS, 30.0f, 50.0f, 0.0f}, &s, &lr, NULL)) {
         check(0, "wake_run");
         return;
     }
@@ -197,8 +204,8 @@ static void test_shedding(void)
             cd[i] = wake_drag_coefficient(&w);
             box[i] = wake_control_volume_drag(&w, 1.5f);
         }
-        WakeStats s = wake_stats(cl, cd, steps, steps / 2, dt);
-        float cd_box = wake_stats(cl, box, steps, steps / 2, dt).cd_mean;
+        WakeStats s = wake_stats(cl, cd, (WakeWindow){steps, steps / 2, dt});
+        float cd_box = wake_stats(cl, box, (WakeWindow){steps, steps / 2, dt}).cd_mean;
         free(cl);
         free(cd);
         free(box);
@@ -207,21 +214,22 @@ static void test_shedding(void)
         printf(
             "     Re %.0f: St %.4f, C_D %.4f (box balance %.4f), C_L amplitude %.4f, %d periods\n",
             res[k], s.strouhal, s.cd_mean, cd_box, s.cl_amp, s.periods);
-        snprintf(what, sizeof what,
-                 "Re %.0f: vortex shedding (C_L amplitude > 0.1, at least 4 periods measured)",
-                 res[k]);
+        (void)snprintf(
+            what, sizeof what,
+            "Re %.0f: vortex shedding (C_L amplitude > 0.1, at least 4 periods measured)", res[k]);
         check(s.cl_amp > 0.1f && s.periods >= 4, what);
-        snprintf(what, sizeof what, "Re %.0f: Strouhal number in 0.16..0.22", res[k]);
+        (void)snprintf(what, sizeof what, "Re %.0f: Strouhal number in 0.16..0.22", res[k]);
         check(s.strouhal >= 0.16f && s.strouhal <= 0.22f, what);
-        snprintf(what, sizeof what, "Re %.0f: mean C_D in 1.42..1.66", res[k]);
+        (void)snprintf(what, sizeof what, "Re %.0f: mean C_D in 1.42..1.66", res[k]);
         check(s.cd_mean >= 1.42f && s.cd_mean <= 1.66f, what);
-        snprintf(what, sizeof what,
-                 "Re %.0f: C_D from the momentum balance of a 3 D box within 4 %% of the force on "
-                 "the faces",
-                 res[k]);
+        (void)snprintf(
+            what, sizeof what,
+            "Re %.0f: C_D from the momentum balance of a 3 D box within 4 %% of the force on "
+            "the faces",
+            res[k]);
         check(fabsf(cd_box / s.cd_mean - 1.0f) < 0.04f, what);
         if (k > 0) {
-            snprintf(what, sizeof what, "Re %.0f: St higher than at the lower Re", res[k]);
+            (void)snprintf(what, sizeof what, "Re %.0f: St higher than at the lower Re", res[k]);
             check(s.strouhal > last, what);
         }
         last = s.strouhal;

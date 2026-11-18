@@ -1,4 +1,3 @@
-#define _POSIX_C_SOURCE 200809L
 
 #include <math.h>
 #include <signal.h>
@@ -28,8 +27,8 @@ static void restore_tty(void)
 {
     if (tty_saved) {
         tcsetattr(STDIN_FILENO, TCSANOW, &saved_tty);
-        fputs("\x1b[0m\x1b[?25h\n", stdout);
-        fflush(stdout);
+        (void)fputs("\x1b[0m\x1b[?25h\n", stdout);
+        (void)fflush(stdout);
         tty_saved = 0;
     }
 }
@@ -54,32 +53,44 @@ typedef struct {
     int count;
 } Log;
 
+/* Frees the logged columns and the water of run_headless. */
+static void release(Fluid *f, float **const *cols, size_t n)
+{
+    for (size_t i = 0; i < n; i++) {
+        free(*cols[i]);
+        *cols[i] = NULL;
+    }
+    fluid_free(f);
+}
+
 static int run_headless(const char *dir)
 {
     int steps = (int)(18.0f / DT);
     Fluid f;
     Swimmer s;
     Log log = {0};
-    if (fluid_init(&f, GRID, VISC)) {
+    if (fluid_init(&f, (FluidSpec){GRID, VISC})) {
         return 1;
     }
-    swimmer_init(&s, 0.3f, 0.5f, 0.0f);
+    swimmer_init(&s, (Vec2f){0.3f, 0.5f}, 0.0f);
     float **cols[] = {&log.t, &log.speed, &log.energy, &log.vort, &log.re, &log.x, &log.y};
     for (size_t i = 0; i < sizeof cols / sizeof *cols; i++) {
         *cols[i] = calloc((size_t)steps, sizeof(float));
         if (!*cols[i]) {
+            release(&f, cols, sizeof cols / sizeof *cols);
             return 1;
         }
     }
 
     char path[512];
-    snprintf(path, sizeof path, "%s/run.csv", dir);
+    (void)snprintf(path, sizeof path, "%s/run.csv", dir);
     FILE *csv = fopen(path, "w");
     if (!csv) {
-        fprintf(stderr, "cannot write %s\n", path);
+        (void)fprintf(stderr, "cannot write %s\n", path);
+        release(&f, cols, sizeof cols / sizeof *cols);
         return 1;
     }
-    fputs("t,x,y,speed,thrust,drag,fluid_energy,max_vorticity,reynolds\n", csv);
+    (void)fputs("t,x,y,speed,thrust,drag,fluid_energy,max_vorticity,reynolds\n", csv);
 
     for (int k = 0; k < steps; k++) {
         Controls c;
@@ -96,10 +107,13 @@ static int run_headless(const char *dir)
         log.re[k] = re;
         log.x[k] = s.x;
         log.y[k] = s.y;
-        fprintf(csv, "%.2f,%.4f,%.4f,%.5f,%.5f,%.5f,%.6g,%.4f,%.2f\n", t, s.x, s.y, speed, s.thrust,
-                s.drag, log.energy[k], log.vort[k], re);
+        (void)fprintf(csv, "%.2f,%.4f,%.4f,%.5f,%.5f,%.5f,%.6g,%.4f,%.2f\n", t, s.x, s.y, speed,
+                      s.thrust, s.drag, log.energy[k], log.vort[k], re);
     }
-    fclose(csv);
+    if (fclose(csv) != 0) {
+        release(&f, cols, sizeof cols / sizeof *cols);
+        return 1;
+    }
     log.count = steps;
 
     struct {
@@ -115,20 +129,24 @@ static int run_headless(const char *dir)
          log.energy},
     };
     for (size_t i = 0; i < sizeof plots / sizeof *plots; i++) {
-        snprintf(path, sizeof path, "%s/%s", dir, plots[i].file);
+        (void)snprintf(path, sizeof path, "%s/%s", dir, plots[i].file);
         Series one = {plots[i].name, plots[i].y, plots[i].color};
-        if (svg_plot(path, plots[i].title, "time [s]", plots[i].ylabel, log.t, steps, &one, 1)) {
+        if (svg_plot(path, &(Chart){plots[i].title, "time [s]", plots[i].ylabel}, log.t, steps,
+                     &one, 1)) {
+            release(&f, cols, sizeof cols / sizeof *cols);
             return 1;
         }
     }
-    snprintf(path, sizeof path, "%s/track.svg", dir);
+    (void)snprintf(path, sizeof path, "%s/track.svg", dir);
     Series track = {"path", log.y, "#ff7f0e"};
-    if (svg_plot(path, "Swimmer track (top view)", "x", "y", log.x, steps, &track, 1)) {
+    if (svg_plot(path, &(Chart){"Swimmer track (top view)", "x", "y"}, log.x, steps, &track, 1)) {
+        release(&f, cols, sizeof cols / sizeof *cols);
         return 1;
     }
 
-    snprintf(path, sizeof path, "%s/wake.svg", dir);
+    (void)snprintf(path, sizeof path, "%s/wake.svg", dir);
     if (render_field_svg(&f, &s, path)) {
+        release(&f, cols, sizeof cols / sizeof *cols);
         return 1;
     }
 
@@ -141,10 +159,7 @@ static int run_headless(const char *dir)
     printf("steps=%d peak_speed=%.3f peak_re=%.0f final_energy=%.3g max_div=%.3g\n", steps, peak,
            reynolds_number(peak, 2.0f * s.radius, f.visc), log.energy[steps - 1],
            fluid_max_divergence(&f));
-    for (size_t i = 0; i < sizeof cols / sizeof *cols; i++) {
-        free(*cols[i]);
-    }
-    fluid_free(&f);
+    release(&f, cols, sizeof cols / sizeof *cols);
     return 0;
 }
 
@@ -152,10 +167,10 @@ static int run_snapshot(void)
 {
     Fluid f;
     Swimmer s;
-    if (fluid_init(&f, GRID, VISC)) {
+    if (fluid_init(&f, (FluidSpec){GRID, VISC})) {
         return 1;
     }
-    swimmer_init(&s, 0.3f, 0.5f, 0.0f);
+    swimmer_init(&s, (Vec2f){0.3f, 0.5f}, 0.0f);
     for (int k = 0; k < (int)(6.0f / DT); k++) {
         Controls c;
         scripted((float)k * DT, &c);
@@ -168,7 +183,7 @@ static int run_snapshot(void)
         return 1;
     }
     size_t used = render_frame(&f, &s, buf, cap);
-    fwrite(buf, 1, used, stdout);
+    (void)fwrite(buf, 1, used, stdout);
     free(buf);
     fluid_free(&f);
     return used ? 0 : 1;
@@ -200,7 +215,9 @@ static void paint_frame(const Fluid *f, const Swimmer *s, int scale, unsigned ch
             unsigned char c =
                 (unsigned char)vorticity_index(fluid_vorticity_at(f, i + 1, j + 1), ref);
             for (int dy = 0; dy < scale; dy++) {
-                memset(px + ((n - 1 - j) * scale + dy) * size + i * scale, c, (size_t)scale);
+                memset(px + (size_t)((n - 1 - j) * scale + dy) * (size_t)size +
+                           (size_t)i * (size_t)scale,
+                       c, (size_t)scale);
             }
         }
     }
@@ -226,10 +243,10 @@ static int run_gif(const char *path)
     enum { SCALE = 8, STRIDE = 9 };
     Fluid f;
     Swimmer s;
-    if (fluid_init(&f, GRID, VISC)) {
+    if (fluid_init(&f, (FluidSpec){GRID, VISC})) {
         return 1;
     }
-    swimmer_init(&s, 0.3f, 0.5f, 0.0f);
+    swimmer_init(&s, (Vec2f){0.3f, 0.5f}, 0.0f);
     unsigned char pal[GIF_COLOURS][3] = {
         {12, 16, 30},    {30, 50, 100},   {40, 75, 150},   {55, 105, 195},  {80, 140, 230},
         {120, 175, 250}, {170, 210, 255}, {100, 40, 40},   {150, 50, 45},   {200, 70, 55},
@@ -253,7 +270,9 @@ static int run_gif(const char *path)
         swimmer_step(&s, &f, &c, DT);
         fluid_step(&f, DT);
     }
-    rc |= gif_close(g);
+    if (gif_close(g)) {
+        rc = 1;
+    }
     printf("final position (%.3f, %.3f), speed %.3f\n", s.x, s.y, swimmer_speed(&s));
     free(px);
     fluid_free(&f);
@@ -263,26 +282,30 @@ static int run_gif(const char *path)
 static int run_interactive(void)
 {
     if (!isatty(STDIN_FILENO)) {
-        fputs("interactive mode needs a terminal; try --snapshot or --headless\n", stderr);
+        (void)fputs("interactive mode needs a terminal; try --snapshot or --headless\n", stderr);
         return 1;
     }
     tcgetattr(STDIN_FILENO, &saved_tty);
     tty_saved = 1;
-    atexit(restore_tty);
+    if (atexit(restore_tty) != 0) {
+        restore_tty();
+        return 1;
+    }
     struct termios raw = saved_tty;
-    raw.c_lflag &= (tcflag_t) ~(ICANON | ECHO);
+    raw.c_lflag &= ~((tcflag_t)ICANON | (tcflag_t)ECHO);
     raw.c_cc[VMIN] = 0;
     raw.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSANOW, &raw);
-    signal(SIGINT, on_signal);
-    signal(SIGTERM, on_signal);
+    if (signal(SIGINT, on_signal) == SIG_ERR || signal(SIGTERM, on_signal) == SIG_ERR) {
+        return 1;
+    }
 
     Fluid f;
     Swimmer s;
-    if (fluid_init(&f, GRID, VISC)) {
+    if (fluid_init(&f, (FluidSpec){GRID, VISC})) {
         return 1;
     }
-    swimmer_init(&s, 0.3f, 0.5f, 0.0f);
+    swimmer_init(&s, (Vec2f){0.3f, 0.5f}, 0.0f);
     size_t cap = (size_t)GRID * (size_t)GRID * 48u;
     char *buf = malloc(cap);
     if (!buf) {
@@ -291,7 +314,7 @@ static int run_interactive(void)
 
     float stroke_left = 0.0f, turn_left = 0.0f, turn_dir = 0.0f, t = 0.0f;
     int paused = 0;
-    fputs("\x1b[2J\x1b[?25l", stdout);
+    (void)fputs("\x1b[2J\x1b[?25l", stdout);
     while (!stop_flag) {
         char key;
         while (read(STDIN_FILENO, &key, 1) == 1) {
@@ -318,18 +341,27 @@ static int run_interactive(void)
             t += DT;
         }
         size_t used = render_frame(&f, &s, buf, cap);
-        fputs("\x1b[H", stdout);
-        fwrite(buf, 1, used, stdout);
+        (void)fputs("\x1b[H", stdout);
+        (void)fwrite(buf, 1, used, stdout);
         printf("t=%5.1fs speed=%.2f Re=%4.0f  [space/w] stroke  [a/d] turn  [p] pause  [q] "
                "quit\x1b[K\n",
                t, swimmer_speed(&s), reynolds_number(swimmer_speed(&s), 2.0f * s.radius, f.visc));
-        fflush(stdout);
-        struct timespec nap = {0, 20 * 1000 * 1000};
+        (void)fflush(stdout);
+        struct timespec nap = {0, 20L * 1000L * 1000L};
         nanosleep(&nap, NULL);
     }
     free(buf);
     fluid_free(&f);
     return 0;
+}
+
+/* Frees the wake and the five series of run_karman. */
+static void karman_free(Wake *w, float *const series[5])
+{
+    for (int i = 0; i < 5; i++) {
+        free(series[i]);
+    }
+    wake_free(w);
 }
 
 /* M2: the cylinder wake at Re 150 on 8 cells per diameter for 100 D/U. Writes karman.svg (vorticity
@@ -348,6 +380,7 @@ static int run_karman(const char *dir)
     float *pl = calloc((size_t)steps / (size_t)every + 1, sizeof(float)),
           *pd = calloc((size_t)steps / (size_t)every + 1, sizeof(float));
     if (!cl || !cd || !t || !pl || !pd) {
+        karman_free(&w, (float *[]){cl, cd, t, pl, pd});
         return 1;
     }
     for (int k = 0; k < steps; k++) {
@@ -361,32 +394,32 @@ static int run_karman(const char *dir)
             count++;
         }
     }
-    WakeStats s = wake_stats(cl, cd, steps, steps / 2, dt);
+    WakeStats s = wake_stats(cl, cd, (WakeWindow){steps, steps / 2, dt});
     char path[512];
-    snprintf(path, sizeof path, "%s/karman.svg", dir);
+    (void)snprintf(path, sizeof path, "%s/karman.svg", dir);
     char title[160];
-    snprintf(title, sizeof title,
-             "Karman vortex street behind a cylinder, Re 150, t = %.0f D/U (St %.3f, C_D %.2f)",
-             w.t, s.strouhal, s.cd_mean);
-    if (render_wake_svg(&w, path, title)) {
-        fprintf(stderr, "cannot write %s\n", path);
+    (void)snprintf(
+        title, sizeof title,
+        "Karman vortex street behind a cylinder, Re 150, t = %.0f D/U (St %.3f, C_D %.2f)", w.t,
+        s.strouhal, s.cd_mean);
+    if (render_wake_svg(&w, (SvgFigure){path, title})) {
+        (void)fprintf(stderr, "cannot write %s\n", path);
+        karman_free(&w, (float *[]){cl, cd, t, pl, pd});
         return 1;
     }
-    snprintf(path, sizeof path, "%s/karman-forces.svg", dir);
+    (void)snprintf(path, sizeof path, "%s/karman-forces.svg", dir);
     Series series[] = {{"C_D drag", pd, "#c0392b"}, {"C_L lift", pl, "#2471a3"}};
-    if (svg_plot(path, "Forces on the cylinder, Re 150 (8 cells per D)", "t [D/U]", "coefficient",
-                 t, count, series, 2)) {
+    if (svg_plot(
+            path,
+            &(Chart){"Forces on the cylinder, Re 150 (8 cells per D)", "t [D/U]", "coefficient"}, t,
+            count, series, 2)) {
+        karman_free(&w, (float *[]){cl, cd, t, pl, pd});
         return 1;
     }
     printf("Re 150, 8 cells/D, %d steps of %.4f D/U: St = %.4f, mean C_D = %.4f, C_L amplitude = "
            "%.4f over %d periods\n",
            steps, dt, s.strouhal, s.cd_mean, s.cl_amp, s.periods);
-    free(cl);
-    free(cd);
-    free(t);
-    free(pl);
-    free(pd);
-    wake_free(&w);
+    karman_free(&w, (float *[]){cl, cd, t, pl, pd});
     return 0;
 }
 
@@ -407,8 +440,8 @@ int main(int argc, char **argv)
     if (argc == 1) {
         return run_interactive();
     }
-    fprintf(stderr,
-            "usage: %s [--headless [outdir] | --snapshot | --gif [file] | --karman [outdir]]\n",
-            argv[0]);
+    (void)fprintf(
+        stderr, "usage: %s [--headless [outdir] | --snapshot | --gif [file] | --karman [outdir]]\n",
+        argv[0]);
     return 2;
 }

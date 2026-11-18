@@ -51,11 +51,22 @@ static void bc_v(const Wake *w, float *v)
 static float clampf(float x, float lo, float hi) { return x < lo ? lo : x > hi ? hi : x; }
 
 /* Bilinear interpolation of a staggered component. (gx, gy) are grid coordinates of that component,
- * clamped to its stored range [x0, x1] x [y0, y1]; lo / hi receive the four corner extremes when
+ * clamped to its stored range [x0, x1] x [y0, y1]; `corners` receives the four corner extremes when
  * not NULL. */
-static float interp(const float *a, int stride, int ox, int oy, float gx, float gy, int x0, int x1,
-                    int y0, int y1, float *lo, float *hi)
+/* Layout of one staggered component: row stride, index offsets, and the stored range. */
+typedef struct {
+    int stride, ox, oy, x0, x1, y0, y1;
+} Stagger;
+
+/* The smallest and largest of the four corner values. */
+typedef struct {
+    float lo, hi;
+} Corners;
+
+static float interp(const float *a, const Stagger *g, Vec2f at, Corners *corners)
 {
+    int stride = g->stride, ox = g->ox, oy = g->oy, x0 = g->x0, x1 = g->x1, y0 = g->y0, y1 = g->y1;
+    float gx = at.x, gy = at.y;
     gx = clampf(gx, (float)x0, (float)x1);
     gy = clampf(gy, (float)y0, (float)y1);
     int i = (int)floorf(gx), j = (int)floorf(gy);
@@ -68,27 +79,29 @@ static float interp(const float *a, int stride, int ox, int oy, float gx, float 
     float s = gx - (float)i, t = gy - (float)j;
     size_t k = (size_t)(i + ox) + (size_t)stride * (size_t)(j + oy);
     float a00 = a[k], a10 = a[k + 1], a01 = a[k + (size_t)stride], a11 = a[k + (size_t)stride + 1];
-    if (lo) {
-        *lo = fminf(fminf(a00, a10), fminf(a01, a11));
-        *hi = fmaxf(fmaxf(a00, a10), fmaxf(a01, a11));
+    if (corners) {
+        corners->lo = fminf(fminf(a00, a10), fminf(a01, a11));
+        corners->hi = fmaxf(fmaxf(a00, a10), fmaxf(a01, a11));
     }
     return (1.0f - t) * ((1.0f - s) * a00 + s * a10) + t * ((1.0f - s) * a01 + s * a11);
 }
 
-static float sample_u(const Wake *w, const float *u, float x, float y, float *lo, float *hi)
+static float sample_u(const Wake *w, const float *u, float x, float y, Corners *corners)
 {
-    return interp(u, w->nx + 1, 0, 1, x / w->h, y / w->h - 0.5f, 0, w->nx, -1, w->ny, lo, hi);
+    const Stagger g = {w->nx + 1, 0, 1, 0, w->nx, -1, w->ny};
+    return interp(u, &g, (Vec2f){x / w->h, y / w->h - 0.5f}, corners);
 }
 
-static float sample_v(const Wake *w, const float *v, float x, float y, float *lo, float *hi)
+static float sample_v(const Wake *w, const float *v, float x, float y, Corners *corners)
 {
-    return interp(v, w->nx + 2, 1, 0, x / w->h - 0.5f, y / w->h, -1, w->nx, 0, w->ny, lo, hi);
+    const Stagger g = {w->nx + 2, 1, 0, -1, w->nx, 0, w->ny};
+    return interp(v, &g, (Vec2f){x / w->h - 0.5f, y / w->h}, corners);
 }
 
-void wake_sample(const Wake *w, float x, float y, float *u, float *v)
+Vec2f wake_sample(const Wake *w, Vec2f at)
 {
-    *u = sample_u(w, w->u, x, y, NULL, NULL);
-    *v = sample_v(w, w->v, x, y, NULL, NULL);
+    Vec2f vel = {sample_u(w, w->u, at.x, at.y, NULL), sample_v(w, w->v, at.x, at.y, NULL)};
+    return vel;
 }
 
 /* Departure point of the particle now at (x, y), traced dir * dt through the carrier field (cu, cv)
@@ -96,10 +109,10 @@ void wake_sample(const Wake *w, float x, float y, float *u, float *v)
 static void trace(const Wake *w, const float *cu, const float *cv, float x, float y, float dt,
                   float *px, float *py)
 {
-    float u = sample_u(w, cu, x, y, NULL, NULL), v = sample_v(w, cv, x, y, NULL, NULL);
+    float u = sample_u(w, cu, x, y, NULL), v = sample_v(w, cv, x, y, NULL);
     float mx = x + 0.5f * dt * u, my = y + 0.5f * dt * v;
-    *px = x + dt * sample_u(w, cu, mx, my, NULL, NULL);
-    *py = y + dt * sample_v(w, cv, mx, my, NULL, NULL);
+    *px = x + dt * sample_u(w, cu, mx, my, NULL);
+    *py = y + dt * sample_v(w, cv, mx, my, NULL);
 }
 
 /* MacCormack advection of both components (Selle et al. 2008): a semi-Lagrangian step back, one
@@ -118,14 +131,14 @@ static void advect(Wake *w, float dt)
         for (int i = 1; i < nx; i++) {
             float px, py;
             trace(w, u0, v0, (float)i * h, ((float)j + 0.5f) * h, -dt, &px, &py);
-            uh[U_(w, i, j)] = sample_u(w, u0, px, py, NULL, NULL);
+            uh[U_(w, i, j)] = sample_u(w, u0, px, py, NULL);
         }
     }
     for (int j = 1; j < ny; j++) {
         for (int i = 0; i < nx; i++) {
             float px, py;
             trace(w, u0, v0, ((float)i + 0.5f) * h, (float)j * h, -dt, &px, &py);
-            vh[V_(w, i, j)] = sample_v(w, v0, px, py, NULL, NULL);
+            vh[V_(w, i, j)] = sample_v(w, v0, px, py, NULL);
         }
     }
     for (int j = 0; j < ny; j++) {
@@ -142,24 +155,26 @@ static void advect(Wake *w, float dt)
     memcpy(vt, vh, v_count(w) * sizeof(float));
     for (int j = 0; j < ny; j++) {
         for (int i = 1; i < nx; i++) {
-            float x = (float)i * h, y = ((float)j + 0.5f) * h, px, py, qx, qy, lo, hi;
+            float x = (float)i * h, y = ((float)j + 0.5f) * h, px, py, qx, qy;
             trace(w, u0, v0, x, y, -dt, &px, &py);
-            sample_u(w, u0, px, py, &lo, &hi);
+            Corners range;
+            (void)sample_u(w, u0, px, py, &range);
             trace(w, u0, v0, x, y, dt, &qx, &qy);
-            float back = sample_u(w, uh, qx, qy, NULL, NULL);
+            float back = sample_u(w, uh, qx, qy, NULL);
             size_t k = U_(w, i, j);
-            ut[k] = clampf(uh[k] + 0.5f * (u0[k] - back), lo, hi);
+            ut[k] = clampf(uh[k] + 0.5f * (u0[k] - back), range.lo, range.hi);
         }
     }
     for (int j = 1; j < ny; j++) {
         for (int i = 0; i < nx; i++) {
-            float x = ((float)i + 0.5f) * h, y = (float)j * h, px, py, qx, qy, lo, hi;
+            float x = ((float)i + 0.5f) * h, y = (float)j * h, px, py, qx, qy;
             trace(w, u0, v0, x, y, -dt, &px, &py);
-            sample_v(w, v0, px, py, &lo, &hi);
+            Corners range;
+            (void)sample_v(w, v0, px, py, &range);
             trace(w, u0, v0, x, y, dt, &qx, &qy);
-            float back = sample_v(w, vh, qx, qy, NULL, NULL);
+            float back = sample_v(w, vh, qx, qy, NULL);
             size_t k = V_(w, i, j);
-            vt[k] = clampf(vh[k] + 0.5f * (v0[k] - back), lo, hi);
+            vt[k] = clampf(vh[k] + 0.5f * (v0[k] - back), range.lo, range.hi);
         }
     }
     memcpy(w->u, ut, u_count(w) * sizeof(float));
@@ -344,8 +359,10 @@ static void project(Wake *w, int aware, double *ix, double *iy)
 
 /* Solid fraction of a face at distance d from the centre: 1 deep inside, 0 outside, linear over one
  * cell centred on the radius plus `shift` cells. */
-static float solid(const Wake *w, float shift, int sharp, float x, float y)
+static float solid(const Wake *w, const WakeSetup *setup, float x, float y)
 {
+    float shift = setup->wall_shift;
+    int sharp = setup->sharp_wall;
     float d = sqrtf((x - w->cx) * (x - w->cx) + (y - w->cy) * (y - w->cy));
     if (sharp) {
         return d <= w->r + shift * w->h ? 1.0f : 0.0f;
@@ -400,8 +417,7 @@ int wake_init_setup(Wake *w, const WakeSetup *setup)
     for (int j = -1; j <= w->ny; j++) {
         for (int i = 0; i <= w->nx; i++) {
             size_t k = U_(w, i, j);
-            w->chiu[k] =
-                solid(w, setup->wall_shift, setup->sharp_wall, (float)i * h, ((float)j + 0.5f) * h);
+            w->chiu[k] = solid(w, setup, (float)i * h, ((float)j + 0.5f) * h);
             w->u[k] = INFLOW * (1.0f - w->chiu[k]);
         }
     }
@@ -411,8 +427,7 @@ int wake_init_setup(Wake *w, const WakeSetup *setup)
         for (int i = -1; i <= w->nx; i++) {
             size_t k = V_(w, i, j);
             float x = ((float)i + 0.5f) * h - (w->cx + 1.5f), y = (float)j * h - w->cy;
-            w->chiv[k] =
-                solid(w, setup->wall_shift, setup->sharp_wall, ((float)i + 0.5f) * h, (float)j * h);
+            w->chiv[k] = solid(w, setup, ((float)i + 0.5f) * h, (float)j * h);
             w->v[k] = 0.3f * expf(-(x * x + y * y) / 0.5f) * (1.0f - w->chiv[k]);
         }
     }
@@ -522,8 +537,10 @@ float wake_recirculation_length(const Wake *w)
 {
     float rear = w->cx + w->r, step = 0.25f * w->h, end = (float)w->length;
     int reversed = 0;
-    for (float x = rear + w->h; x < end; x += step) {
-        float u = sample_u(w, w->u, x, w->cy, NULL, NULL);
+    /* x is a position walked along the centre line, not a loop counter. */
+    float x = rear + w->h;
+    while (x < end) {
+        float u = sample_u(w, w->u, x, w->cy, NULL);
         if (u < 0.0f) {
             reversed = 1;
         } else if (reversed) {
@@ -531,6 +548,7 @@ float wake_recirculation_length(const Wake *w)
         } else if (x > rear + 2.0f * w->h) {
             return 0.0f;
         }
+        x += step;
     }
     return 0.0f;
 }
@@ -540,8 +558,10 @@ float strouhal_number(float frequency, float diameter, float speed)
     return speed > 0.0f ? frequency * diameter / speed : 0.0f;
 }
 
-WakeStats wake_stats(const float *cl, const float *cd, int count, int from, float dt)
+WakeStats wake_stats(const float *cl, const float *cd, WakeWindow window)
 {
+    int count = window.count, from = window.from;
+    float dt = window.dt;
     WakeStats s = {0};
     if (from < 0) {
         from = 0;
@@ -594,9 +614,12 @@ WakeStats wake_stats(const float *cl, const float *cd, int count, int from, floa
     return s;
 }
 
-int wake_run(int cells_per_diameter, float reynolds, float t_end, float dt, WakeStats *stats,
-             float *lr, float *cl, float *cd, int cap, int *count)
+int wake_run(WakeRun run, WakeStats *stats, float *lr, const WakeRecord *record)
 {
+    int cells_per_diameter = run.cells_per_diameter;
+    float reynolds = run.reynolds, t_end = run.t_end, dt = run.dt;
+    float *cl = record ? record->cl : NULL, *cd = record ? record->cd : NULL;
+    int cap = record ? record->cap : 0, *count = record ? record->count : NULL;
     Wake w;
     if (wake_init(&w, cells_per_diameter, reynolds)) {
         return -1;
@@ -624,7 +647,7 @@ int wake_run(int cells_per_diameter, float reynolds, float t_end, float dt, Wake
         }
     }
     if (stats) {
-        *stats = wake_stats(l, d, steps, steps / 2, dt);
+        *stats = wake_stats(l, d, (WakeWindow){steps, steps / 2, dt});
     }
     if (lr) {
         *lr = wake_recirculation_length(&w);

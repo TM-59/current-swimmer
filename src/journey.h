@@ -28,19 +28,22 @@ enum {
 };
 
 /* Numeric story effects, one bit each, so the bench can remove them one by one. */
-enum {
-    JE_PACE = 1u << 0,  /* swimming with Silt: strokes cost less stamina */
-    JE_ROUTE = 1u << 1, /* the pipe narrows the water: stronger jet in reach 2; the ditch is slack
-                           and ends at a weir */
-    JE_EDDY = 1u
-        << 2, /* rest in the eddy: stamina refilled, a larger reserve for reaches 3 and 4 */
-    JE_WARM = 1u << 3,    /* warm drain water: stamina comes back at half speed in reach 4 */
-    JE_PARTING = 1u << 4, /* Silt stays behind: no more pace in reach 5 */
-    JE_STAY = 1u << 5, /* staying with Silt: stamina back, faster recovery; the last board comes out
-                          as you leave */
-    JE_SURGE = 1u << 6, /* the second board: stronger jet from the halfway mark of reach 5 */
-    JE_ALL = (1u << 7) - 1u
-};
+/* Macros, not an enum: C enumerators are int, and the masks are combined with unsigned bit ops. */
+/* swimming with Silt: strokes cost less stamina */
+#define JE_PACE (1U << 0U)
+/* the pipe narrows the water: stronger jet in reach 2; the ditch is slack and ends at a weir */
+#define JE_ROUTE (1U << 1U)
+/* rest in the eddy: stamina refilled, a larger reserve for reaches 3 and 4 */
+#define JE_EDDY (1U << 2U)
+/* warm drain water: stamina comes back at half speed in reach 4 */
+#define JE_WARM (1U << 3U)
+/* Silt stays behind: no more pace in reach 5 */
+#define JE_PARTING (1U << 4U)
+/* staying with Silt: stamina back, faster recovery; the last board comes out as you leave */
+#define JE_STAY (1U << 5U)
+/* the second board: stronger jet from the halfway mark of reach 5 */
+#define JE_SURGE (1U << 6U)
+#define JE_ALL ((1U << 7U) - 1U)
 
 enum { JB_NONE, JB_CLEAR, JB_SWEPT };
 
@@ -77,7 +80,12 @@ typedef struct {
 int journey_init(Journey *j, unsigned effects);
 void journey_free(Journey *j);
 /* One fixed 0.02 s step. Does nothing while a scene is open or after the end. */
-void journey_step(Journey *j, float turn, int stroke);
+/* One step's controls: turn in -1..1, stroke 0 or 1. */
+typedef struct {
+    float turn;
+    int stroke;
+} JourneyInput;
+void journey_step(Journey *j, JourneyInput in);
 /* Close the open scene. Choice scenes take option 0 or 1; others take 0. Returns 0 when accepted.
  */
 int journey_answer(Journey *j, int option);

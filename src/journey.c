@@ -152,7 +152,8 @@ static float regen_rate(const Journey *j)
 
 static void sluice(Journey *j)
 {
-    fluid_add_force(&j->water, SLUICE_X, SLUICE_Y, -j->flow, 0.0f, SLUICE_RADIUS, J_DT);
+    fluid_add_force(&j->water, (ForceBlob){SLUICE_X, SLUICE_Y, -j->flow, 0.0f, SLUICE_RADIUS},
+                    J_DT);
 }
 
 /* The sluice has been running for SPIN_UP_STEPS steps (10 s) before the swimmer gets there. The
@@ -184,11 +185,11 @@ static void spin_up(Journey *j)
 static void start_reach(Journey *j)
 {
     fluid_free(&j->water);
-    if (fluid_init(&j->water, J_GRID, J_VISC)) {
+    if (fluid_init(&j->water, (FluidSpec){J_GRID, J_VISC})) {
         j->reach = J_REACHES;
         return;
     }
-    swimmer_init(&j->fish, START_X, START_Y, 0.0f);
+    swimmer_init(&j->fish, (Vec2f){START_X, START_Y}, 0.0f);
     j->flow = BASE_FLOW[j->reach];
     if (j->reach == 1 && j->route == 0 && on(j, JE_ROUTE)) {
         j->flow *= PIPE_FLOW;
@@ -216,10 +217,10 @@ int journey_init(Journey *j, unsigned effects)
     j->route = j->stay = -1;
     j->silt = 1;
     j->stamina = j->stamina_max = 1.0f;
-    if (fluid_init(&j->water, J_GRID, J_VISC)) {
+    if (fluid_init(&j->water, (FluidSpec){J_GRID, J_VISC})) {
         return 1;
     }
-    swimmer_init(&j->fish, START_X, START_Y, 0.0f);
+    swimmer_init(&j->fish, (Vec2f){START_X, START_Y}, 0.0f);
     j->scene = JS_NONE;
     open_scene(j, JS_OUTLET);
     return 0;
@@ -230,6 +231,9 @@ void journey_free(Journey *j) { fluid_free(&j->water); }
 static void clear_reach(Journey *j)
 {
     static const int next[J_REACHES] = {JS_CULVERT, JS_EDDY, JS_WARM, JS_REEDS, JS_SPRING};
+    if (j->reach < 0 || j->reach >= J_REACHES) {
+        return; /* every reach is already cleared */
+    }
     int scene = next[j->reach];
     j->reach++;
     /* The heavy scenes and the ending get the screen to themselves: no cleared banner. */
@@ -239,8 +243,10 @@ static void clear_reach(Journey *j)
     open_scene(j, scene);
 }
 
-void journey_step(Journey *j, float turn, int stroke)
+void journey_step(Journey *j, JourneyInput in)
 {
+    float turn = in.turn;
+    int stroke = in.stroke;
     if (j->scene != JS_NONE || j->reach >= J_REACHES || !j->water.u) {
         return;
     }
@@ -273,8 +279,11 @@ void journey_step(Journey *j, float turn, int stroke)
     if (j->stamina < 0.12f * j->stamina_max) {
         j->crisis_reach[r] = 1;
     }
-    if (j->banner_left > 0.0f && (j->banner_left -= J_DT) <= 0.0f) {
-        j->banner = JB_NONE;
+    if (j->banner_left > 0.0f) {
+        j->banner_left -= J_DT;
+        if (j->banner_left <= 0.0f) {
+            j->banner = JB_NONE;
+        }
     }
     if (j->fish.x > j->best_x) {
         j->best_x = j->fish.x;
@@ -314,10 +323,13 @@ void journey_step(Journey *j, float turn, int stroke)
     if (need > 0.0f) {
         /* The weir and the reeds: the clock and the current keep running; the timer fills only
          * while Copperfin holds close. */
-        if (d2 <= HOLD_RADIUS * HOLD_RADIUS && (j->held += J_DT) >= need) {
-            j->held = 0.0f;
-            if (++j->mark >= j->marks) {
-                clear_reach(j);
+        if (d2 <= HOLD_RADIUS * HOLD_RADIUS) {
+            j->held += J_DT;
+            if (j->held >= need) {
+                j->held = 0.0f;
+                if (++j->mark >= j->marks) {
+                    clear_reach(j);
+                }
             }
         }
         return;

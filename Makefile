@@ -29,7 +29,7 @@ test_story: $(STORY) tests/test_story.c tests/story_run.h tests/story_policy.h s
 	$(CC) $(CFLAGS) -o $@ $(STORY) tests/test_story.c $(LDLIBS)
 
 story_bench: $(STORY) tests/story_bench.c tests/story_run.h tests/story_policy.h src/journey.h
-	$(CC) $(CFLAGS) -o $@ $(STORY) tests/story_bench.c $(LDLIBS)
+	$(CC) $(CFLAGS) $(POSIX) -o $@ $(STORY) tests/story_bench.c $(LDLIBS)
 
 # The story rows are compared byte for byte; generate and check them with the
 # Debian 13 toolchain of the Dockerfile so libm rounding is the same everywhere.
@@ -80,7 +80,7 @@ karman: current-swimmer
 
 # Regenerates the plotted figures and the measured-values table of docs/theory (one command).
 theory_figs: $(STORY) src/view.c src/svg.c src/render.c src/wake.c tests/theory_figs.c tests/story_run.h tests/story_policy.h src/journey.h src/view.h src/svg.h src/render.h src/wake.h
-	$(CC) $(CFLAGS) -o $@ $(STORY) src/view.c src/svg.c src/render.c src/wake.c tests/theory_figs.c $(LDLIBS)
+	$(CC) $(CFLAGS) $(POSIX) -o $@ $(STORY) src/view.c src/svg.c src/render.c src/wake.c tests/theory_figs.c $(LDLIBS)
 
 theory-figs: theory_figs
 	mkdir -p docs/theory/figures

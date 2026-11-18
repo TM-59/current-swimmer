@@ -9,11 +9,11 @@ int main(void)
 {
     Fluid water;
     Swimmer fish;
-    assert(fluid_init(&water, 48, 0.0004f) == 0);
-    swimmer_init(&fish, 0.3f, 0.5f, 0.0f);
+    assert(fluid_init(&water, (FluidSpec){48, 0.0004f}) == 0);
+    swimmer_init(&fish, (Vec2f){0.3f, 0.5f}, 0.0f);
     assert(view_init() == 0);
     for (int step = 0; step < 900; step++) {
-        float t = step * 0.02f;
+        float t = (float)step * 0.02f;
         Controls c = {t < 7.0f ? 0.5f : -0.5f, fmodf(t, 2.4f) < 0.5f};
         swimmer_step(&fish, &water, &c, 0.02f);
         fluid_step(&water, 0.02f);

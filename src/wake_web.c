@@ -62,7 +62,7 @@ int wv_init(float reynolds, int cells_per_diameter)
 static void measure(void)
 {
     int from = recorded / 2;
-    WakeStats s = wake_stats(cl, cd, recorded, from, dt);
+    WakeStats s = wake_stats(cl, cd, (WakeWindow){recorded, from, dt});
     int shedding = s.periods >= 2 && s.cl_amp > 0.02f;
     state[WV_ST] = shedding ? s.strouhal : 0.0f;
     state[WV_CD_MEAN] = s.cd_mean;

@@ -34,7 +34,7 @@ static void seed_vortex(Fluid *f)
 static void test_still_water_stays_still(void)
 {
     Fluid f;
-    fluid_init(&f, 32, 0.001f);
+    fluid_init(&f, (FluidSpec){32, 0.001f});
     for (int k = 0; k < 20; k++) {
         fluid_step(&f, 0.02f);
     }
@@ -45,8 +45,8 @@ static void test_still_water_stays_still(void)
 static void test_projection_keeps_flow_divergence_free(void)
 {
     Fluid f;
-    fluid_init(&f, 32, 0.001f);
-    fluid_add_force(&f, 0.5f, 0.5f, 40.0f, 10.0f, 0.06f, 0.1f);
+    fluid_init(&f, (FluidSpec){32, 0.001f});
+    fluid_add_force(&f, (ForceBlob){0.5f, 0.5f, 40.0f, 10.0f, 0.06f}, 0.1f);
     float before = fluid_max_divergence(&f);
     fluid_step(&f, 0.02f);
     float after = fluid_max_divergence(&f);
@@ -57,7 +57,7 @@ static void test_projection_keeps_flow_divergence_free(void)
 static void test_unforced_flow_only_loses_energy(void)
 {
     Fluid f;
-    fluid_init(&f, 32, 0.001f);
+    fluid_init(&f, (FluidSpec){32, 0.001f});
     seed_vortex(&f);
     float e = fluid_kinetic_energy(&f);
     CHECK(e > 0.01f, "seed vortex is empty");
@@ -73,14 +73,22 @@ static void test_unforced_flow_only_loses_energy(void)
 static void test_symmetry_of_mirrored_forcing(void)
 {
     Fluid f;
-    fluid_init(&f, 32, 0.001f);
-    fluid_add_force(&f, 0.5f, 0.5f, 30.0f, 0.0f, 0.06f, 0.1f);
+    fluid_init(&f, (FluidSpec){32, 0.001f});
+    fluid_add_force(&f, (ForceBlob){0.5f, 0.5f, 30.0f, 0.0f, 0.06f}, 0.1f);
     for (int k = 0; k < 10; k++) {
         fluid_step(&f, 0.02f);
     }
     float a, b, c, d;
-    fluid_sample(&f, 0.5f, 0.3f, &a, &b);
-    fluid_sample(&f, 0.5f, 0.7f, &c, &d);
+    {
+        const Vec2f water = fluid_sample(&f, (Vec2f){0.5f, 0.3f});
+        a = water.x;
+        b = water.y;
+    }
+    {
+        const Vec2f water = fluid_sample(&f, (Vec2f){0.5f, 0.7f});
+        c = water.x;
+        d = water.y;
+    }
     CHECK(fabsf(a - c) < 1e-2f && fabsf(b + d) < 1e-2f,
           "mirror symmetry broken (%.4f vs %.4f, %.4f vs %.4f)", a, c, b, d);
     fluid_free(&f);
@@ -98,8 +106,8 @@ static void test_stroke_pushes_swimmer_forward_and_water_backward(void)
     Fluid f;
     Swimmer s;
     Controls c = {0.0f, 1};
-    fluid_init(&f, 48, 0.0004f);
-    swimmer_init(&s, 0.4f, 0.5f, 0.0f);
+    fluid_init(&f, (FluidSpec){48, 0.0004f});
+    swimmer_init(&s, (Vec2f){0.4f, 0.5f}, 0.0f);
     for (int k = 0; k < 15; k++) {
         swimmer_step(&s, &f, &c, 0.02f);
         fluid_step(&f, 0.02f);
@@ -107,8 +115,7 @@ static void test_stroke_pushes_swimmer_forward_and_water_backward(void)
     CHECK(s.x > 0.4f && s.vx > 0.0f, "swimmer did not move along its heading (x=%.4f vx=%.4f)", s.x,
           s.vx);
     CHECK(fabsf(s.y - 0.5f) < 1e-3f, "swimmer drifted sideways (y=%.5f)", s.y);
-    float u, v;
-    fluid_sample(&f, s.x - 0.1f, s.y, &u, &v);
+    float u = fluid_sample(&f, (Vec2f){s.x - 0.1f, s.y}).x;
     CHECK(u < 0.0f, "jet behind the body should flow backwards (u=%.4f)", u);
     fluid_free(&f);
 }
@@ -118,8 +125,8 @@ static void test_swimmer_stays_inside_the_pool(void)
     Fluid f;
     Swimmer s;
     Controls c = {0.0f, 1};
-    fluid_init(&f, 32, 0.0004f);
-    swimmer_init(&s, 0.5f, 0.5f, 0.0f);
+    fluid_init(&f, (FluidSpec){32, 0.0004f});
+    swimmer_init(&s, (Vec2f){0.5f, 0.5f}, 0.0f);
     for (int k = 0; k < 400; k++) {
         swimmer_step(&s, &f, &c, 0.02f);
         fluid_step(&f, 0.02f);
@@ -132,8 +139,8 @@ static void test_render_draws_every_cell(void)
 {
     Fluid f;
     Swimmer s;
-    fluid_init(&f, 48, 0.0004f);
-    swimmer_init(&s, 0.5f, 0.5f, 0.0f);
+    fluid_init(&f, (FluidSpec){48, 0.0004f});
+    swimmer_init(&s, (Vec2f){0.5f, 0.5f}, 0.0f);
     static char buf[48 * 48 * 48];
     size_t used = render_frame(&f, &s, buf, sizeof buf);
     int blocks = 0;

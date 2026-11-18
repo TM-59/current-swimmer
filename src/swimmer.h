@@ -20,7 +20,7 @@ typedef struct {
     int stroke; /* 1 while the tail beats */
 } Controls;
 
-void swimmer_init(Swimmer *s, float x, float y, float heading);
+void swimmer_init(Swimmer *s, Vec2f at, float heading);
 float swimmer_speed(const Swimmer *s);
 /* Advance the body one step and push the equal and opposite forces into the fluid. */
 void swimmer_step(Swimmer *s, Fluid *f, const Controls *c, float dt);

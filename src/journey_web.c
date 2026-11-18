@@ -77,7 +77,7 @@ void jw_step(float turn, int stroke)
     if (!ready) {
         return;
     }
-    journey_step(&journey, isfinite(turn) ? turn : 0.0f, stroke != 0);
+    journey_step(&journey, (JourneyInput){isfinite(turn) ? turn : 0.0f, stroke != 0});
     refresh();
 }
 

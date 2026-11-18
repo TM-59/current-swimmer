@@ -21,7 +21,7 @@ static void refresh(void)
     state[VIEW_DRAG] = fish.drag;
     state[VIEW_ENERGY] = fluid_kinetic_energy(&water);
     state[VIEW_DIV] = fluid_max_divergence(&water);
-    state[VIEW_TIME] = steps * 0.02f;
+    state[VIEW_TIME] = (float)steps * 0.02f;
     state[VIEW_RADIUS] = fish.radius;
     state[VIEW_VORT] = fluid_max_abs_vorticity(&water);
     for (int j = 1; j <= VIEW_GRID; j++) {
@@ -38,10 +38,10 @@ static void refresh(void)
 int view_init(void)
 {
     fluid_free(&water);
-    if (fluid_init(&water, VIEW_GRID, 0.0004f)) {
+    if (fluid_init(&water, (FluidSpec){VIEW_GRID, 0.0004f})) {
         return 1;
     }
-    swimmer_init(&fish, 0.3f, 0.5f, 0.0f);
+    swimmer_init(&fish, (Vec2f){0.3f, 0.5f}, 0.0f);
     steps = 0;
     refresh();
     return 0;

@@ -42,9 +42,14 @@ static void diffuse(const Fluid *f, int b, float *x, const float *x0, float dt)
     lin_solve(f, b, x, x0, a, 1.0f + 4.0f * a);
 }
 
-static void advect(const Fluid *f, int b, float *d, const float *d0, const float *u, const float *v,
-                   float dt)
+/* The velocity field that carries a quantity. */
+typedef struct {
+    const float *u, *v;
+} Carrier;
+
+static void advect(const Fluid *f, int b, float *d, const float *d0, Carrier by, float dt)
 {
+    const float *u = by.u, *v = by.v;
     int n = f->n;
     float dt0 = dt * (float)n;
     for (int j = 1; j <= n; j++) {
@@ -98,8 +103,10 @@ static void project(Fluid *f)
     set_bnd(f, 2, f->v);
 }
 
-int fluid_init(Fluid *f, int n, float visc)
+int fluid_init(Fluid *f, FluidSpec spec)
 {
+    int n = spec.n;
+    float visc = spec.visc;
     size_t cells = (size_t)(n + 2) * (size_t)(n + 2);
     memset(f, 0, sizeof *f);
     f->n = n;
@@ -138,13 +145,14 @@ void fluid_step(Fluid *f, float dt)
     project(f);
     memcpy(f->u0, f->u, bytes);
     memcpy(f->v0, f->v, bytes);
-    advect(f, 1, f->u, f->u0, f->u0, f->v0, dt);
-    advect(f, 2, f->v, f->v0, f->u0, f->v0, dt);
+    advect(f, 1, f->u, f->u0, (Carrier){f->u0, f->v0}, dt);
+    advect(f, 2, f->v, f->v0, (Carrier){f->u0, f->v0}, dt);
     project(f);
 }
 
-void fluid_add_force(Fluid *f, float x, float y, float fx, float fy, float radius, float dt)
+void fluid_add_force(Fluid *f, ForceBlob blob, float dt)
 {
+    float x = blob.x, y = blob.y, fx = blob.fx, fy = blob.fy, radius = blob.radius;
     int n = f->n;
     float h = 1.0f / (float)n;
     float inv = 1.0f / (2.0f * radius * radius);
@@ -158,8 +166,9 @@ void fluid_add_force(Fluid *f, float x, float y, float fx, float fy, float radiu
     }
 }
 
-void fluid_sample(const Fluid *f, float x, float y, float *u, float *v)
+Vec2f fluid_sample(const Fluid *f, Vec2f at)
 {
+    float x = at.x, y = at.y;
     int n = f->n;
     float gx = x * (float)n + 0.5f, gy = y * (float)n + 0.5f;
     if (gx < 0.5f) {
@@ -177,10 +186,12 @@ void fluid_sample(const Fluid *f, float x, float y, float *u, float *v)
     int i0 = (int)gx, j0 = (int)gy;
     float s1 = gx - (float)i0, t1 = gy - (float)j0;
     float s0 = 1.0f - s1, t0 = 1.0f - t1;
-    *u = s0 * (t0 * f->u[IX(f, i0, j0)] + t1 * f->u[IX(f, i0, j0 + 1)]) +
-         s1 * (t0 * f->u[IX(f, i0 + 1, j0)] + t1 * f->u[IX(f, i0 + 1, j0 + 1)]);
-    *v = s0 * (t0 * f->v[IX(f, i0, j0)] + t1 * f->v[IX(f, i0, j0 + 1)]) +
-         s1 * (t0 * f->v[IX(f, i0 + 1, j0)] + t1 * f->v[IX(f, i0 + 1, j0 + 1)]);
+    Vec2f vel;
+    vel.x = s0 * (t0 * f->u[IX(f, i0, j0)] + t1 * f->u[IX(f, i0, j0 + 1)]) +
+            s1 * (t0 * f->u[IX(f, i0 + 1, j0)] + t1 * f->u[IX(f, i0 + 1, j0 + 1)]);
+    vel.y = s0 * (t0 * f->v[IX(f, i0, j0)] + t1 * f->v[IX(f, i0, j0 + 1)]) +
+            s1 * (t0 * f->v[IX(f, i0 + 1, j0)] + t1 * f->v[IX(f, i0 + 1, j0 + 1)]);
+    return vel;
 }
 
 float fluid_kinetic_energy(const Fluid *f)
