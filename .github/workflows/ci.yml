@@ -19,3 +19,18 @@ jobs:
       # make test inside the Dockerfile's Debian 13 toolchain: the story bench rows in
       # docs/narrative are compared byte for byte, so libm must round the same way as `make story`.
       - run: docker build -t current-swimmer .
+  style:
+    # [CI存続] PR 上の軽量ゲート: 整形・lint・型検査(make check-style)。版は uv.lock と package-lock.json。
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "lts/*"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: make check-style
