@@ -1,4 +1,3 @@
-'use strict';
 // Words for "Upstream". The scenes open where the C journey (src/journey.c) says; the text lives here.
 const STORY = {
   outlet: {
@@ -83,7 +82,7 @@ const STORY = {
       ['Copperfin', 'That was home. You could have waited one more day.'],
       [
         '',
-        (route, stay) =>
+        (_route, stay) =>
           stay === 1
             ? 'You left the reeds early. The worst of the flood is still behind the stone.'
             : 'You stayed until his gills moved slow and even. The board came out while you waited, and the whole flood is in front of you.',
@@ -235,9 +234,9 @@ const REACHES = [
     paintControls();
   }
   function paintControls() {
-    document
-      .querySelectorAll('[data-control]')
-      .forEach((b) => b.classList.toggle('held', control(b.dataset.control)));
+    for (const b of document.querySelectorAll('[data-control]')) {
+      b.classList.toggle('held', control(b.dataset.control));
+    }
   }
   function setPaused(value) {
     paused = value;
@@ -661,7 +660,10 @@ const REACHES = [
       ctx.lineWidth = dpr;
       ctx.setLineDash([2 * dpr, 7 * dpr]);
       ctx.beginPath();
-      trail.forEach(([x, y], i) => (i ? ctx.lineTo(PX(x), PY(y)) : ctx.moveTo(PX(x), PY(y))));
+      trail.forEach(([x, y], i) => {
+        if (i) ctx.lineTo(PX(x), PY(y));
+        else ctx.moveTo(PX(x), PY(y));
+      });
       ctx.stroke();
       ctx.setLineDash([]);
     }

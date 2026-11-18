@@ -1,4 +1,3 @@
-'use strict';
 // Behind a post (M2). Every number on this page is read from the C wake (src/wake.c via src/wake_web.c).
 (async () => {
   const $ = (id) => document.getElementById(id);

@@ -1,11 +1,12 @@
 // Local-only browser checks. Every screenshot comes from the built C/WASM app.
-import { createRequire } from 'node:module';
-import { createServer } from 'node:http';
-import { readFile, mkdir, writeFile, stat } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import path from 'node:path';
-import os from 'node:os';
+
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
+import { createRequire } from 'node:module';
+import os from 'node:os';
+import path from 'node:path';
 
 const require = createRequire(import.meta.url);
 let chromium;
@@ -335,7 +336,7 @@ try {
         const small = [],
           tiny = [];
         const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-        for (let n; (n = walk.nextNode()); ) {
+        for (let n = walk.nextNode(); n; n = walk.nextNode()) {
           const el = n.parentElement;
           if (
             n.textContent.trim() &&
@@ -418,7 +419,7 @@ try {
   }
 
   // M2 "Behind a post": the C wake in the browser. The hook advances the same C steps the page loop runs.
-  const wakeUrl = url + 'wake.html';
+  const wakeUrl = `${url}wake.html`;
   const pageText = (p) =>
     p.evaluate(() => {
       const seen = (el) => {
@@ -435,7 +436,7 @@ try {
       const small = [],
         tiny = [];
       const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      for (let n; (n = walk.nextNode()); ) {
+      for (let n = walk.nextNode(); n; n = walk.nextNode()) {
         const el = n.parentElement;
         if (
           n.textContent.trim() &&
@@ -592,7 +593,7 @@ try {
       bytes: (await stat(`${images}/${file}.jpg`)).size,
     });
   const summary = { checks, errors, externalRequests: external, images: sizes };
-  await writeFile('out/smoke.json', JSON.stringify(summary, null, 2) + '\n');
+  await writeFile('out/smoke.json', `${JSON.stringify(summary, null, 2)}\n`);
   console.log(JSON.stringify(summary, null, 2));
 } finally {
   await browser.close();
