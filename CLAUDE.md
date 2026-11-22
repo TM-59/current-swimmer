@@ -44,6 +44,7 @@
   fails on any duplicate key. Do not derive seeds by XOR or sums.
 - Heavy scenes (Silt stops in the reeds, the last board comes out) and the ending show no
   cleared banner. `beats.json` emotion values are self-scored until an independent review.
+- Story playback controls (#26): no story scene runs on its own clock (scenes wait for a press; banners, demonstrations and timers are the game's own clock). A pull request that adds a timed story scene adds skip, 2x fast-forward, 0.5x slow, pause and resume in the same pull request.
 
 ## Original artwork exception (M4)
 
