@@ -1,0 +1,72 @@
+{
+ "note": "BGM の生成計画(current-swimmer M63 #33、親 project-context#598)。caption は音の特徴だけ(曲名・作者・作品名を書かない。musical-notation-translator の docs/copyright-policy.md)。どの場面も文字か計器を読むので全部器楽。soft の曲のループは bars × 4 × 60 / bpm ≥ 16 秒(pond 28.2・story 24.8・spring 22.5 秒)。 候補は Colab の GPU で作る(local-llm-ops #260、python -m tools.colab bgm)、落ちる先は scripts/bgm_gen.py(手元の CPU)。scripts/bgm_bake.py が門・ループの切り出し・書き出し(web/bgm/)。",
+ "engine": "ACE-Step/Ace-Step1.5:acestep-v15-turbo",
+ "steps": 8,
+ "note_loop": "ループは生成の長さより十分短く取り、継ぎ目の始点を探す余地を残す。soft の曲は継ぎ目を 2 秒重ね、長さを 1 小節ずつ縮めて 16 秒以上で継ぎ目の音色の跳びが最小の物を採る。pulse は 0.12 秒(拍がずれない)。",
+ "seeds": [
+  901,
+  902,
+  903,
+  904,
+  905,
+  906
+ ],
+ "note_seeds": "seed は 1 場面 6 本。他の作品と同じ caption・seed を使わない(既存の plan.json の seed 11〜876 と別の 901〜906)。",
+ "scenes": {
+  "pond": {
+   "role": "基調(タイトル・自由泳ぎ・実演)",
+   "loop": true,
+   "bpm": 68,
+   "key": "D major",
+   "seconds": 44,
+   "bars": 8,
+   "mood": "soft",
+   "xf": 2.0,
+   "captions": [
+    "slow tender ballad, soft felt piano melody over warm string pad, gentle fingerpicked harp arpeggios, clear cool water and dappled light, calm and hopeful, no drums, instrumental",
+    "quiet pastoral ballad, mellow flute leading a lyrical tune, soft acoustic guitar chords, low cello swells, a small fish drifting in a sunlit pond, slow and warm, no percussion, instrumental"
+   ]
+  },
+  "upstream": {
+   "role": "戦闘の役(Upstream の 5 区間を流れに逆らって泳ぐ間)",
+   "loop": true,
+   "bpm": 104,
+   "key": "D minor",
+   "seconds": 44,
+   "bars": 16,
+   "mood": "pulse",
+   "captions": [
+    "driving determined adventure track, steady kick drum on every beat, pulsing staccato cellos, rising string ostinato, bright piano stabs, swimming hard against a strong current, urgent and brave, instrumental",
+    "energetic struggle music, tight snare and tom groove on every beat, rolling marimba ostinato, surging low brass swells, rushing water energy, persistent forward motion, instrumental"
+   ]
+  },
+  "story": {
+   "role": "物語(Upstream の場面。重い場面 reeds・surge と一時停止は 0.4 倍)",
+   "loop": true,
+   "bpm": 58,
+   "key": "D major",
+   "seconds": 40,
+   "bars": 6,
+   "mood": "soft",
+   "xf": 2.0,
+   "captions": [
+    "sparse quiet storytelling underscore, soft celesta notes, low bowed double bass drone, faint airy pad, long rests, a whispered conversation underwater, gentle and patient, no drums, instrumental",
+    "minimal reflective score, solo nylon guitar harmonics, distant soft horn, warm sustained strings, wide spaces of near silence, an old fish speaking slowly, no percussion, instrumental"
+   ]
+  },
+  "spring": {
+   "role": "結末(泉に着いた後の場面)",
+   "loop": true,
+   "bpm": 64,
+   "key": "F major",
+   "seconds": 40,
+   "bars": 6,
+   "mood": "soft",
+   "xf": 2.0,
+   "captions": [
+    "gentle closing ballad, warm piano and solo violin duet, slow rising strings, cold clear spring water at last, bittersweet and peaceful, no drums, instrumental",
+    "slow farewell ballad, soft oboe melody over harp and string ensemble, a long journey ending in quiet light, tender and wistful, no percussion, instrumental"
+   ]
+  }
+ }
+}
