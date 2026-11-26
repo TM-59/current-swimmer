@@ -1,0 +1,80 @@
+{
+ "checks": [
+  {
+   "what": "nothing fetched before the first press",
+   "fetched": 0
+  },
+  {
+   "what": "pond plays",
+   "cue": {
+    "track": "pond",
+    "gain": 1
+   },
+   "level": -28.4,
+   "gain": 0.45
+  },
+  {
+   "what": "pause ducks",
+   "gain": [
+    0.45,
+    0.18000000000000002
+   ],
+   "level": [
+    -28.4,
+    -35.1
+   ]
+  },
+  {
+   "what": "story plays",
+   "cue": {
+    "track": "story",
+    "gain": 0.7
+   },
+   "level": -24.7,
+   "gain": 0.315
+  },
+  {
+   "what": "mute during a crossfade silences the fading track too",
+   "level": -120
+  },
+  {
+   "what": "upstream plays",
+   "cue": {
+    "track": "upstream",
+    "gain": 1
+   },
+   "level": -20.9,
+   "gain": 0.45
+  },
+  {
+   "what": "♪ mutes and restores",
+   "size": {
+    "x": 1132,
+    "y": 10,
+    "width": 44,
+    "height": 44
+   },
+   "level": [
+    -120,
+    -32.8
+   ]
+  },
+  {
+   "what": "cues: heavy scenes story 0.4x, ending spring, paused reach 0.4x, demo pond"
+  },
+  {
+   "what": "dist bytes",
+   "bytes": 3047673
+  }
+ ],
+ "fetched": [
+  "list.json",
+  "pond.ogg",
+  "upstream.ogg",
+  "story.ogg",
+  "spring.ogg"
+ ],
+ "ok": true,
+ "seconds": 20.8,
+ "when": "2026-11-26T23:30:07.186Z"
+}
