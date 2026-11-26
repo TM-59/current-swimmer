@@ -17,7 +17,9 @@ emcc src/fluid.c src/swimmer.c src/view.c src/journey.c src/journey_web.c src/wa
   -sFILESYSTEM=0 -sINITIAL_MEMORY=16777216 \
   '-sEXPORTED_FUNCTIONS=["_view_init","_view_step","_view_state","_view_field","_jw_init","_jw_step","_jw_answer","_jw_state","_jw_field","_wv_init","_wv_step","_wv_state","_wv_field","_wv_trace","_wv_trace_count","_wv_trace_dt"]' \
   '-sEXPORTED_RUNTIME_METHODS=["HEAPF32"]' -o dist/physics.js
-cp web/index.html web/wake.html web/style.css web/app.js web/wake.js dist/
+cp web/index.html web/wake.html web/style.css web/app.js web/bgm.js web/wake.js dist/
+mkdir -p dist/bgm
+cp web/bgm/* dist/bgm/
 cp assets/hero-fish.png assets/pond.jpg dist/assets/
 python3 - <<'PY'
 from pathlib import Path

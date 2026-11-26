@@ -1,3 +1,5 @@
+import { BgmPlayer, cue } from './bgm.js';
+
 // Words for "Upstream". The scenes open where the C journey (src/journey.c) says; the text lives here.
 /**
  * A line of a scene: who speaks ('' for narration) and the words, or a function of the two choices.
@@ -812,6 +814,34 @@ const REACHES = [
       chart.stroke();
     }
   }
+  // ---------------------------------------------------------------- music (docs/bgm.md)
+  // Ballad on the title and in free swimming, a pulse track while swimming the Upstream reaches,
+  // quiet music under a scene and its own track for the ending. Nothing loads before the first press.
+  const music = new BgmPlayer();
+  const muteButton = $as('mute', HTMLButtonElement);
+  let muted = false;
+  /** @param {boolean} value */
+  function setMuted(value) {
+    muted = value;
+    muteButton.setAttribute('aria-pressed', String(muted));
+    muteButton.setAttribute('aria-label', muted ? 'Play music' : 'Mute music');
+    muteButton.title = muted ? 'Music off · M plays' : 'Music on · M mutes';
+  }
+  muteButton.onclick = () => setMuted(!muted);
+  window.addEventListener('pointerdown', () => music.unlock(), true);
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      music.unlock();
+      if (e.key.toLowerCase() === 'm' && !e.repeat) setMuted(!muted);
+    },
+    true,
+  );
+  const musicCue = () => {
+    const j = journeyState(),
+      id = mode === 'journey' && j[11] >= 0 ? SCENES[j[11]] : null;
+    return cue({ mode, scene: id, heavy: Boolean(id && STORY[id].heavy), paused });
+  };
   // Read-only diagnostics used by smoke checks; no path to change simulation state.
   Object.defineProperty(window, 'swimmerView', {
     get: () => {
@@ -843,6 +873,7 @@ const REACHES = [
           heavy: heavyLog.map((h) => ({ ...h })),
           sceneText: sceneBox.hidden ? '' : $('scene-text').textContent,
         },
+        music: { cue: musicCue(), ...music.state() },
       };
     },
   });
@@ -927,6 +958,7 @@ const REACHES = [
         }
       }
     }
+    music.set(musicCue(), muted);
     draw();
     requestAnimationFrame(frame);
   }
