@@ -46,6 +46,12 @@
   cleared banner. `beats.json` emotion values are self-scored until an independent review.
 - Story playback controls (#26): no story scene runs on its own clock (scenes wait for a press; banners, demonstrations and timers are the game's own clock). A pull request that adds a timed story scene adds skip, 2x fast-forward, 0.5x slow, pause and resume in the same pull request.
 
+## Music (M63, #33)
+
+- The browser view plays BGM: `web/bgm.js` picks the track from the screen (`cue()`), ballad base `pond`, `upstream` while swimming a reach (pulse), `story` under a scene (0.7x, heavy scenes and pause 0.4x), `spring` for the ending. All instrumental. The terminal, CSV/SVG, GIF and `wake.html` stay silent.
+- Tracks are original ACE-Step 1.5 (MIT) renders, generated from `docs/bgm/plan.json` and gated by `scripts/bgm_bake.py` without loosening the gates (`docs/bgm.md`). No third-party audio. Nothing is fetched before the first press.
+- Mute (♪, 44 px, and `M`) also cuts the master output, so a track fading out in a crossfade is silenced. `node scripts/bgm-smoke.mjs` (local only) checks it.
+
 ## Original artwork exception (M4)
 
 `assets/hero-fish.png` and `assets/pond.jpg` are original artwork made with Codex's

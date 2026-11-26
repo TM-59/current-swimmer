@@ -62,6 +62,24 @@ interface SwimmerView {
     heavy: HeavyEntry[];
     sceneText: string | null;
   };
+  /** The music player (web/bgm.js) for scripts/bgm-smoke.mjs. */
+  music: BgmView;
+}
+
+/** What the music player asks for and what it plays (web/bgm.js). */
+interface BgmView {
+  cue: { track: string; gain: number };
+  want: string | null;
+  playing: string;
+  gain: number;
+  muted: boolean;
+  unlocked: boolean;
+  running: boolean;
+  fetched: string[];
+  loaded: string[];
+  failed: string[];
+  /** Output RMS in dBFS. */
+  level: number;
 }
 
 /** The C wake readout of web/wake.js (src/wake_web.c, by name). */
